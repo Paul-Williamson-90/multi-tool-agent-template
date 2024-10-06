@@ -53,6 +53,7 @@ async def example_test(input: str) -> str:
     res = await workflow.run(input=input)
     return res
 
+
 user_input = input("Provide two numbers for multiplication: ")
 user_input = "Multiply these two numbers: " + user_input
 res = asyncio.run(example_test(user_input))

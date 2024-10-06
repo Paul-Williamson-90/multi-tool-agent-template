@@ -106,7 +106,7 @@ class FunctionCallSkill(ABC):
         if isinstance(args, dict) and "input" in args:
             args = args["input"]
         else:
-            return "Invalid input: expected a dictionary with the key \"input\" that's value is a dictionary."
+            return 'Invalid input: expected a dictionary with the key "input" that\'s value is a dictionary.'
         ...
 
 
