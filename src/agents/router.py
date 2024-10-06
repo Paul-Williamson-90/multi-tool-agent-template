@@ -31,6 +31,7 @@ class AgentFlowOpenAI(Workflow):
         token_limit: int = 1000,
         system_prompt: str = SYSTEM_PROMPT,
     ):
+        # TODO: Add history to memory as Optional
         super().__init__(timeout=timeout)
         self.llm = llm
         self.skill_map = skill_map
