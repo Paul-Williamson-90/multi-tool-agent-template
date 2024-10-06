@@ -81,7 +81,7 @@ class FunctionCallSkill(ABC):
     def get_function_name(self) -> str:
         return self.name
 
-    def get_function_dict(self) -> dict:
+    def get_function_dict(self) -> dict[str, dict[str, Union[str, dict]]]:
         return self.function_dict
 
     def get_function_callable(self) -> Callable:
