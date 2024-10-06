@@ -115,7 +115,9 @@ class SkillMap:
         Args:
         - skills: list[FunctionCallSkill] - list of FunctionCallSkill objects
         """
-        self.skill_map: dict[str, dict[str, Union[Callable, dict[str, dict[str, Union[str, dict]]]]]] = dict()
+        self.skill_map: dict[
+            str, dict[str, Union[Callable, dict[str, dict[str, Union[str, dict]]]]]
+        ] = dict()
         for skill in skills:
             self.skill_map[skill.get_function_name()] = {
                 "function_dict": skill.get_function_dict(),

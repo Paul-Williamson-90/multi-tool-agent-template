@@ -1,4 +1,3 @@
-from dotenv import load_dotenv
 from llama_index.core.llms import ChatMessage
 from llama_index.core.memory import ChatMemoryBuffer
 from llama_index.core.tools import FunctionTool, ToolMetadata, ToolSelection
@@ -8,9 +7,6 @@ from openinference.instrumentation import using_prompt_template
 
 from src.prompt_templates.router_template import SYSTEM_PROMPT
 from src.skills.base import SkillMap
-
-
-load_dotenv()
 
 
 class ToolCallEvent(Event):
@@ -26,7 +22,7 @@ class AgentFlowOpenAI(Workflow):
         self,
         llm: OpenAI,
         skill_map: SkillMap,
-        model: str = "gpt-4o", # TODO: Change this to typing.Literal
+        model: str = "gpt-4o",  # TODO: Change this to typing.Literal
         timeout: int = 300,
         token_limit: int = 1000,
         system_prompt: str = SYSTEM_PROMPT,
@@ -54,7 +50,7 @@ class AgentFlowOpenAI(Workflow):
 
     @step
     async def prepare_agent(self, ev: StartEvent) -> RouterInputEvent:
-        user_input = ev.input # TODO: Understand StartEvent better and resolve this
+        user_input = ev.input  # TODO: Understand StartEvent better and resolve this
         user_msg = ChatMessage(role="user", content=user_input)
         self.memory.put(user_msg)
 
