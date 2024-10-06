@@ -80,7 +80,6 @@ class AgentFlowOpenAI(Workflow):
         tool_calls = self.llm.get_tool_calls_from_response(
             response, error_on_no_tool_call=False
         )
-        print("tool_calls:", tool_calls)
         if tool_calls:
             return ToolCallEvent(tool_calls=tool_calls)
         else:

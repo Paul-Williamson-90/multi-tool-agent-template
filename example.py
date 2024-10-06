@@ -31,7 +31,6 @@ class Multiply(FunctionCallSkill):
         )
 
     def execute(self, args) -> Union[int, float]:
-        print("args:", args)
         if isinstance(args, dict) and "input" in args:
             args = args["input"]
         else:
