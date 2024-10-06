@@ -28,7 +28,7 @@ class SkillArgAttr(BaseModel):
             if not any(
                 [
                     isinstance(eval_type, types.GenericAlias),
-                    isinstance(typing.List, typing._SpecialGenericAlias),
+                    isinstance(eval_type, typing._SpecialGenericAlias),
                     isinstance(eval_type, type),
                 ]
             ):
