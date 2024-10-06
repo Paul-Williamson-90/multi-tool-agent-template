@@ -30,7 +30,7 @@ class Multiply(FunctionCallSkill):
             name=name, description=description, function_args=function_args
         )
 
-    def execute(self, args) -> Union[int, float]:
+    def execute(self, args: dict) -> Union[int, float]:
         if isinstance(args, dict) and "input" in args:
             args = args["input"]
         else:
@@ -48,11 +48,12 @@ llm = OpenAI(api_key=OPENAI_API_KEY, temperature=0.1)
 skillmap = SkillMap(skills=[Multiply()])
 
 
-async def example_test(input: str):
+async def example_test(input: str) -> str:
     workflow = AgentFlowOpenAI(llm=llm, skill_map=skillmap, model="gpt-4o")
     res = await workflow.run(input=input)
     return res
 
-
-res = asyncio.run(example_test("What is 2 times 3?"))
-print(res)
+user_input = input("Provide two numbers for multiplication: ")
+user_input = "Multiply these two numbers: " + user_input
+res = asyncio.run(example_test(user_input))
+print("LLM:", res)

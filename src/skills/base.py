@@ -103,7 +103,11 @@ class FunctionCallSkill(ABC):
         ...
         return "some text result"
         """
-        pass
+        if isinstance(args, dict) and "input" in args:
+            args = args["input"]
+        else:
+            return "Invalid input: expected a dictionary with the key \"input\" that's value is a dictionary."
+        ...
 
 
 class SkillMap:
