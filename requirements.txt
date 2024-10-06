@@ -1,0 +1,5 @@
+openai==1.51.0
+pydantic==2.9.2
+python-dotenv==1.0.1
+llama-index==0.11.16
+openinference_instrumentation_openai==0.1.14
