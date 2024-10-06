@@ -1,6 +1,6 @@
 import inspect
 import typing
-from typing import Any, Callable
+from typing import Any, Callable, types
 from pydantic import BaseModel, validator
 from abc import ABC, abstractmethod
 
@@ -9,20 +9,32 @@ class SkillArgAttr(BaseModel):
     """
     Attributes:
     - name: str - name of the argument
-    - dtype: Any - data type of the argument (typing or python type)
+    - dtype: str - data type of the argument (typing or python type)
     - description: str - description of the argument
     - required: bool - whether the argument is required or not
     """
 
     name: str
-    dtype: Any
+    dtype: str
     description: str
     required: bool = False
 
     @validator("dtype")
-    def dtype_validation(cls, v) -> Any:
-        if not cls.is_typing_type(v) or not cls.is_python_type(v):
-            raise ValueError(f"Type {v} is not a valid type")
+    def dtype_validation(cls, v: str) -> Any:
+        try:
+            eval_type = eval(
+                v, {"__builtins__": __builtins__}, {"typing": typing, **vars(typing)}
+            )
+            if not any(
+                [
+                    isinstance(eval_type, types.GenericAlias),
+                    isinstance(typing.List, typing._SpecialGenericAlias),
+                    isinstance(eval_type, type),
+                ]
+            ):
+                raise ValueError(f"{v} is not a valid type")
+        except Exception as e:
+            raise ValueError(f"{v} is not a valid type: {e}")
         return v
 
     @staticmethod
