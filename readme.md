@@ -3,7 +3,7 @@
 *Note:* This template is yet to be tested with a working version, tests are yet to be written.
 
 # Instructions
-...
+View example.py for a working example of how to use the multi-tool agent router and provide new skills to it.
 
 # Code Base Explained
 ## src.agents.router.AgentFlowOpenAI
