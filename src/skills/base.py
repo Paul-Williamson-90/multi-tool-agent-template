@@ -1,5 +1,6 @@
 import typing
-from typing import Any, Callable, types, Union
+from typing import Any, Callable, Union
+import inspect
 from pydantic import BaseModel, validator
 from abc import ABC, abstractmethod
 
@@ -26,8 +27,7 @@ class SkillArgAttr(BaseModel):
             )
             if not any(
                 [
-                    isinstance(eval_type, types.GenericAlias),
-                    isinstance(eval_type, typing._SpecialGenericAlias),
+                    inspect.getmodule(eval_type) is typing,
                     isinstance(eval_type, type),
                 ]
             ):
@@ -88,10 +88,20 @@ class FunctionCallSkill(ABC):
         return self.function_callable
 
     @abstractmethod
-    def execute(self, *args, **kwargs):
+    def execute(self, args: dict[str, Any]) -> str:
         """
         Abstract method that should be implemented by the child class.
         This method should contain the logic of the function that the skill is supposed to execute.
+
+        ** How to use the args parameter **
+        if isinstance(args, dict) and "input" in args:
+            args = args["input"]
+        else:
+            return "Invalid input: expected a dictionary with the key \"input\" that's value is a dictionary."
+        ...
+        # your code here
+        ...
+        return "some text result"
         """
         pass
 
