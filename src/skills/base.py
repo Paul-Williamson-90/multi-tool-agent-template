@@ -105,8 +105,6 @@ class SkillMap:
         Args:
         - skills: list[FunctionCallSkill] - list of FunctionCallSkill objects
         """
-        skills = [skill() for skill in skills]
-
         self.skill_map = {}
         for skill in skills:
             self.skill_map[skill.get_function_name()] = {
