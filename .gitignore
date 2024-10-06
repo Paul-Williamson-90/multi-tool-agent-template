@@ -1,4 +1,7 @@
 .venv
-__/pycache__/
+/__pycache__/
 .env
 scratchpad.ipynb
+*/__pycache__/*
+*/__pycache__/
+*/*/__pycache__/
