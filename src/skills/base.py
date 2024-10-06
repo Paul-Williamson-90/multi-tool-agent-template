@@ -37,14 +37,6 @@ class SkillArgAttr(BaseModel):
             raise ValueError(f"{v} is not a valid type: {e}")
         return v
 
-    @staticmethod
-    def is_typing_type(ex) -> bool:
-        return hasattr(ex, "__origin__") and inspect.getmodule(ex) is typing
-
-    @staticmethod
-    def is_python_type(ex) -> bool:
-        return isinstance(ex, type)
-
 
 class FunctionCallSkill(ABC):
     def __init__(
