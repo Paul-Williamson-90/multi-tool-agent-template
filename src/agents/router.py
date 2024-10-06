@@ -62,6 +62,7 @@ class AgentFlowOpenAI(Workflow):
 
     @step
     async def router(self, ev: RouterInputEvent) -> ToolCallEvent | StopEvent:
+        # TODO: Tracing / logging for performance monitoring and dataset curation
         messages = ev.input
 
         if not any(
