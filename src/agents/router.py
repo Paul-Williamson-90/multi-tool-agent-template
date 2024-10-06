@@ -26,7 +26,7 @@ class AgentFlowOpenAI(Workflow):
         self,
         llm: OpenAI,
         skill_map: SkillMap,
-        model: str = "gpt-4o",
+        model: str = "gpt-4o", # TODO: Change this to typing.Literal
         timeout: int = 300,
         token_limit: int = 1000,
         system_prompt: str = SYSTEM_PROMPT,
@@ -53,7 +53,7 @@ class AgentFlowOpenAI(Workflow):
 
     @step
     async def prepare_agent(self, ev: StartEvent) -> RouterInputEvent:
-        user_input = ev.input
+        user_input = ev.input # TODO: Understand StartEvent better and resolve this
         user_msg = ChatMessage(role="user", content=user_input)
         self.memory.put(user_msg)
 
