@@ -112,7 +112,7 @@ class SkillMap:
                 "function_callable": skill.get_function_callable(),
             }
 
-    def get_function_callable_by_name(self, skill_name) -> Callable:
+    def get_function_callable_by_name(self, skill_name: str) -> Callable:
         return self.skill_map[skill_name]["function_callable"]
 
     def get_combined_function_description_for_agent(self) -> list[dict]:
@@ -127,5 +127,5 @@ class SkillMap:
     def get_list_of_function_callables(self) -> list[Callable]:
         return [skill["function_callable"] for skill in self.skill_map.values()]
 
-    def get_function_description_by_name(self, skill_name) -> str:
+    def get_function_description_by_name(self, skill_name: str) -> str:
         return str(self.skill_map[skill_name]["function_dict"]["function"])
