@@ -62,7 +62,6 @@ class AgentFlowOpenAI(Workflow):
 
     @step
     async def router(self, ev: RouterInputEvent) -> ToolCallEvent | StopEvent:
-        # TODO: Tracing / logging for performance monitoring and dataset curation
         messages = ev.input
 
         if not any(
@@ -84,6 +83,7 @@ class AgentFlowOpenAI(Workflow):
         tool_calls = self.llm.get_tool_calls_from_response(
             response, error_on_no_tool_call=False
         )
+        print("tool_calls:", tool_calls)
         if tool_calls:
             return ToolCallEvent(tool_calls=tool_calls)
         else:
@@ -96,9 +96,12 @@ class AgentFlowOpenAI(Workflow):
         for tool_call in tool_calls:
             function_name = tool_call.tool_name
             arguments = tool_call.tool_kwargs
+            # TODO: Evaluate this for security and performance.
             if "input" in arguments:
-                arguments["prompt"] = arguments.pop("input")
-
+                arguments = arguments.pop("input")
+                assert arguments[0] == "{"
+                assert arguments[-1] == "}"
+                arguments = {"input": eval(arguments)}
             try:
                 function_callable = self.skill_map.get_function_callable_by_name(
                     function_name
