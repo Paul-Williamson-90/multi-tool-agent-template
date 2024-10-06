@@ -1,4 +1,4 @@
-SYSTEM_PROMPT = """You are a helpful assistant that choses a tool to call based on the user's request.
+SYSTEM_PROMPT = """You are a helpful assistant that chooses a tool to call based on the user's request.
 
 All of your responses should be a tool call or text. Only generate tool calls or text.
 If you generate a tool call, be sure you include the original prompt as is in the parameters.
