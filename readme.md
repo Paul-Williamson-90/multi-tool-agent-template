@@ -7,10 +7,10 @@ View example.py for a working example of how to use the multi-tool agent router 
 
 # Code Base Explained
 ## src.agents.router.AgentFlowOpenAI
-This class is the router LLM that will receive a text input, and return a response. It has skills available to it via 'Skills' which are defined by the programmer and passed via the SkillMap class (src.skills.base.SkillMap).
+This class is the router LLM that will receive a text input, and return a response. It has tools available to it via 'Skills' which are defined by the programmer and passed via the SkillMap class (src.skills.base.SkillMap).
 ## src.skills.base.FunctionCallSkill
 This class is a parent class for 'Skills' which can be passed to the router LLM and available for use when answering input text queries. 
-- execute(): The core method which the router LLM will use when activating the tool.
+- def execute(self, args) -> str: The core method which the router LLM will use when activating the tool.
 ## src.skills.base.SkillArgAttr
 Pydantic class for handling arg attributes for a FunctionCallSkill. The attributes are used to inform the router LLM on how to use the tool available to it, and what args are required/available.
 ## src.skills.base.SkillMap
