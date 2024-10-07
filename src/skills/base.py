@@ -37,9 +37,9 @@ class SkillArgAttr(BaseModel):
                     isinstance(eval_type, type),
                 ]
             ):
-                raise SkillArgException(f"{v} is not a valid type")
+                raise SkillArgException(f"dtype {v} is not a valid type (e.g. \"Union[str, int]\")")
         except Exception as e:
-            raise SkillArgException(f"{v} is not a valid type: {e}")
+            raise SkillArgException(f"dtype {v} is not a valid type (e.g. \"Union[str, int]\"): {e}")
         return v
 
     @model_validator(mode="before")
