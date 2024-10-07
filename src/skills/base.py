@@ -4,6 +4,7 @@ import inspect
 from pydantic import BaseModel, validator, model_validator
 from abc import ABC, abstractmethod
 
+from src.skills.errors import SkillArgException
 
 class SkillArgAttr(BaseModel):
     """
@@ -33,9 +34,9 @@ class SkillArgAttr(BaseModel):
                     isinstance(eval_type, type),
                 ]
             ):
-                raise ValueError(f"{v} is not a valid type")
+                raise SkillArgException(f"{v} is not a valid type")
         except Exception as e:
-            raise ValueError(f"{v} is not a valid type: {e}")
+            raise SkillArgException(f"{v} is not a valid type: {e}")
         return v
 
     @model_validator(mode='before')
@@ -43,7 +44,7 @@ class SkillArgAttr(BaseModel):
         required = values.get('required')
         default = values.get('default')
         if required and default is not None:
-            raise ValueError("If 'required' is set to True, 'default' must be None")
+            raise SkillArgException("If 'required' is set to True, 'default' must be None")
         return values
 
 
