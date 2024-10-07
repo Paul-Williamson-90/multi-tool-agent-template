@@ -21,7 +21,7 @@ A class for hosting multiple skills and provided to the router LLM.
 - When the LLM router chooses a skill, it will create a structured output (JSON) in string form as its written response and triggers the use of a tool. The args for the chosen tool are contained in the "input" key of the resulting dictionary (as can be seen on src.agents.router.AgentFlowOpenAI.tool_call_handler).
 - The args for the "execute" method of a src.skills.base.FunctionCallSkill can be access from the resulting "input" dictionary as follows:
 ```python
-def execute(self, args: dict) -> Union[int, float]:
+def execute(self, args: dict) -> str:
     if isinstance(args, dict) and "input" in args:
         args = args["input"]
     else:
