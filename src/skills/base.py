@@ -25,6 +25,8 @@ class SkillArgAttr(BaseModel):
 
     @validator("dtype")
     def dtype_validation(cls, v: str) -> Any:
+        if not isinstance(v, str):
+            raise SkillArgException("dtype must be a string of a valid type (e.g. \"Union[str, int]\")")
         try:
             eval_type = eval(
                 v, {"__builtins__": __builtins__}, {"typing": typing, **vars(typing)}
