@@ -3,7 +3,11 @@
 *Note:* This template is yet to be tested with a working version, tests are yet to be written.
 
 # Instructions
-View example.py for a working example of how to use the multi-tool agent router and provide new skills to it.
+- View example.py for a working example of how to use the multi-tool agent router and provide new skills to it.
+- You will need to create a .env in the root of the project folder with the following keys:
+```
+OPENAI_API_KEY=...
+```
 
 # Code Base Explained
 ## src.agents.router.AgentFlowOpenAI
