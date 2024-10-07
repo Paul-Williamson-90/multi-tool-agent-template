@@ -37,11 +37,11 @@ class SkillArgAttr(BaseModel):
         except Exception as e:
             raise ValueError(f"{v} is not a valid type: {e}")
         return v
-    
+
     @root_validator
-    def required_and_default_validation(cls, values):
-        required = values.get('required')
-        default = values.get('default')
+    def required_and_default_validation(cls, values: dict[str, Any]) -> dict[str, Any]:
+        required = values.get("required")
+        default = values.get("default")
         if required and default is not None:
             raise ValueError("If 'required' is set to True, 'default' must be None")
         return values
