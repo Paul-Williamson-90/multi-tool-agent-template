@@ -39,7 +39,7 @@ class SkillArgAttr(BaseModel):
         return v
     
     @root_validator
-    def check_required_and_default(cls, values):
+    def required_and_default_validation(cls, values):
         required = values.get('required')
         default = values.get('default')
         if required and default is not None:
