@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 
 from src.skills.errors import SkillArgException
 
+
 class SkillArgAttr(BaseModel):
     """
     Attributes:
@@ -39,12 +40,14 @@ class SkillArgAttr(BaseModel):
             raise SkillArgException(f"{v} is not a valid type: {e}")
         return v
 
-    @model_validator(mode='before')
+    @model_validator(mode="before")
     def required_and_default_validation(cls, values: dict[str, Any]) -> dict[str, Any]:
-        required = values.get('required')
-        default = values.get('default')
+        required = values.get("required")
+        default = values.get("default")
         if required and default is not None:
-            raise SkillArgException("If 'required' is set to True, 'default' must be None")
+            raise SkillArgException(
+                "If 'required' is set to True, 'default' must be None"
+            )
         return values
 
 
@@ -139,9 +142,7 @@ class FunctionCallSkill(ABC):
         return self.execute(**parsed_args)
 
     @abstractmethod
-    def execute(
-        self,
-    ) -> str:
+    def execute(self) -> str:
         """
         Abstract method that should be implemented by the child class.
         This method should contain the logic of the function that the skill is supposed to execute.
