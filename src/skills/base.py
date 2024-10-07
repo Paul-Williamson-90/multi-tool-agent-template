@@ -1,7 +1,7 @@
 import typing
 from typing import Any, Callable, Union
 import inspect
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, validator, root_validator
 from abc import ABC, abstractmethod
 
 
@@ -37,6 +37,14 @@ class SkillArgAttr(BaseModel):
         except Exception as e:
             raise ValueError(f"{v} is not a valid type: {e}")
         return v
+    
+    @root_validator
+    def check_required_and_default(cls, values):
+        required = values.get('required')
+        default = values.get('default')
+        if required and default is not None:
+            raise ValueError("If 'required' is set to True, 'default' must be None")
+        return values
 
 
 class FunctionCallSkill(ABC):
