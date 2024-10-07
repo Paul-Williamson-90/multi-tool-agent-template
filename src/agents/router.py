@@ -1,3 +1,5 @@
+from typing import Union
+
 from llama_index.core.llms import ChatMessage
 from llama_index.core.memory import ChatMemoryBuffer
 from llama_index.core.tools import FunctionTool, ToolMetadata, ToolSelection
@@ -58,7 +60,7 @@ class AgentFlowOpenAI(Workflow):
         return RouterInputEvent(input=chat_history)
 
     @step
-    async def router(self, ev: RouterInputEvent) -> ToolCallEvent | StopEvent:
+    async def router(self, ev: RouterInputEvent) -> Union[ToolCallEvent, StopEvent]:
         messages = ev.input
 
         if not any(
