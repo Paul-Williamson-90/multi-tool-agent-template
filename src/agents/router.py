@@ -104,10 +104,12 @@ class AgentFlowOpenAI(Workflow):
                 function_callable = self.skill_map.get_function_callable_by_name(
                     function_name
                 )
+
+                function_result = function_callable(arguments)
+
             except KeyError:
                 function_result = "Error: Unknown function call"
 
-            function_result = function_callable(arguments)
             message = ChatMessage(
                 role="tool",
                 content=function_result,
