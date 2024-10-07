@@ -116,9 +116,9 @@ class FunctionCallSkill(ABC):
 
         for arg in self.function_args:
             if arg.name in input_args:
-                parsed_args[arg.name] = args[arg.name]
+                parsed_args[arg.name] = input_args[arg.name]
             elif arg.required and not arg.default:
-                return f"Invalid input: missing required argument \"{arg.name}\""
+                return f'Invalid input: missing required argument "{arg.name}"'
             else:
                 parsed_args[arg.name] = arg.default
 

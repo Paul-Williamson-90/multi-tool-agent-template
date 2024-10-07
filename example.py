@@ -30,13 +30,8 @@ class Multiply(FunctionCallSkill):
             name=name, description=description, function_args=function_args
         )
 
-    def execute(self, args: dict) -> str:
-        if isinstance(args, dict) and "input" in args:
-            args = args["input"]
-        else:
-            return 'Invalid input: expected a dictionary with the key "input" that\'s value is a dictionary.'
-
-        answer = args["a"] * args["b"]
+    def execute(self, a: Union[int, float], b: Union[int, float]) -> str:
+        answer = a * b
         return f"The answer is {answer}."
 
 
