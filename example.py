@@ -30,7 +30,7 @@ class Multiply(FunctionCallSkill):
             name=name, description=description, function_args=function_args
         )
 
-    def execute(self, args: dict) -> Union[int, float]:
+    def execute(self, args: dict) -> str:
         if isinstance(args, dict) and "input" in args:
             args = args["input"]
         else:
