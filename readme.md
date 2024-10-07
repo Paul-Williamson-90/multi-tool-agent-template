@@ -23,16 +23,6 @@ A class for hosting multiple skills and provided to the router LLM.
 # Creating a New Skill
 - example.py has an example of defining a new skill (multiplication) and adding it to the LLM router's toolkit.
 - When the LLM router chooses a skill, it will create a structured output (JSON) in string form as its written response and triggers the use of a tool. The args for the chosen tool are contained in the "input" key of the resulting dictionary (as can be seen on src.agents.router.AgentFlowOpenAI.tool_call_handler).
-- The args for the "execute" method of a src.skills.base.FunctionCallSkill can be access from the resulting "input" dictionary as follows:
-```python
-def execute(self, args: dict) -> str:
-    if isinstance(args, dict) and "input" in args:
-        args = args["input"]
-    else:
-        return 'Invalid input: expected a dictionary with the key "input" that\'s value is a dictionary.'
-    
-    answer = args["a"] * args["b"]
-    return f"The answer is {answer}."
-```
+- The args are parsed via src.skills.base.FunctionCallSkill.handle_router_input and then passed to the execute method.
 - The src.skills.base.SkillArgAttr objects passed to the src.skills.base.FunctionCallSkill class you create define what args the LLM router should add to the tool call.
-- To create a new skill, create a class that inherits from the src.skills.base.FunctionCallSkill and follow the above when constructing the execute method. The execute method can do pretty much whatever you want it to, so long as it returns a string (images can also be sent if you were to configure the router LLM to also receive images as a VLM).
+- To create a new skill, create a class that inherits from the src.skills.base.FunctionCallSkill. All you need to ensure is that the src.skills.base.SkillArgAttr objects passed to your Skill match those that are required for running the execute method you define. 
