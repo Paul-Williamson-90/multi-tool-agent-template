@@ -1,5 +1,5 @@
 import typing
-from typing import Any, Callable, Union
+from typing import Any, Callable, Union, Optional
 import inspect
 from pydantic import BaseModel, validator, model_validator
 from abc import ABC, abstractmethod
@@ -53,7 +53,7 @@ class FunctionCallSkill(ABC):
         self,
         name: str,
         description: str,
-        function_args: list[SkillArgAttr],
+        function_args: Optional[list[SkillArgAttr]] = [],
     ):
         """
         Instantiates a FunctionCallSkill object.
@@ -62,7 +62,7 @@ class FunctionCallSkill(ABC):
         Args:
         - name: str - name of the function
         - description: str - description of the function
-        - function_args: list[SkillArgAttr] - list of SkillArgAttr objects that define the arguments of the function
+        - function_args: Optional[list[SkillArgAttr]] - list of SkillArgAttr objects that define the arguments of the function
         """
         self.name = name
         self.description = description
