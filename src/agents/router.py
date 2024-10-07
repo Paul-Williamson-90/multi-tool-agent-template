@@ -95,6 +95,7 @@ class AgentFlowOpenAI(Workflow):
             function_name = tool_call.tool_name
             arguments = tool_call.tool_kwargs
             # TODO: Evaluate this for security and performance.
+            # TODO: Add try and except to catch errors and instruct the router to better construct the message
             if "input" in arguments:
                 arguments = arguments.pop("input")
                 assert arguments[0] == "{"
