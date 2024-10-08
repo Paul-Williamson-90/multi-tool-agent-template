@@ -209,7 +209,7 @@ class SkillMap:
     def get_list_of_function_callables(self) -> list[Callable]:
         return [skill["function_callable"] for skill in self.skill_map.values()]
 
-    def get_function_description_by_name(self, skill_name: str) -> str:
+    def get_function_dict_by_name(self, skill_name: str) -> str:
         return str(
-            self.skill_map[skill_name]["function_dict"]["function"]["description"]
+            self.skill_map[skill_name]["function_dict"]["function"]
         )

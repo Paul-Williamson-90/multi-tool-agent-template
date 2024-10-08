@@ -283,7 +283,7 @@ def test_skill_map_get_list_of_function_callables(case_skill_map):
     assert skill_map.get_list_of_function_callables() == [skill.handle_router_input]
 
 
-def test_skill_map_get_function_description_by_name(case_skill_map):
+def test_skill_map_get_function_dict_by_name(case_skill_map):
     skill_map: SkillMap = case_skill_map[0]
     skill: MockFunctionCallSkill = case_skill_map[1]
-    assert skill_map.get_function_description_by_name("test") == skill.description
+    assert skill_map.get_function_dict_by_name("test") == "{'name': 'test', 'description': 'This is a test skill', 'parameters': {'type': 'object', 'properties': {'arg1': {'type': 'Union[str, int]', 'description': 'This is an argument'}}, 'required': ['arg1']}}"
