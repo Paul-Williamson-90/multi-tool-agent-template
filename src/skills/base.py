@@ -1,7 +1,7 @@
 import typing
 from typing import Any, Callable, Union, Optional
 import inspect
-from pydantic import BaseModel, validator, model_validator
+from pydantic import BaseModel, model_validator, field_validator
 from abc import ABC, abstractmethod
 
 from src.skills.errors import SkillArgException
@@ -23,10 +23,12 @@ class SkillArgAttr(BaseModel):
     required: bool = False
     default: Any = None
 
-    @validator("dtype")
+    @field_validator("dtype")
     def dtype_validation(cls, v: str) -> Any:
         if not isinstance(v, str):
-            raise SkillArgException("dtype must be a string of a valid type (e.g. \"Union[str, int]\")")
+            raise SkillArgException(
+                'dtype must be a string of a valid type (e.g. "Union[str, int]")'
+            )
         try:
             eval_type = eval(
                 v, {"__builtins__": __builtins__}, {"typing": typing, **vars(typing)}
@@ -37,9 +39,13 @@ class SkillArgAttr(BaseModel):
                     isinstance(eval_type, type),
                 ]
             ):
-                raise SkillArgException(f"dtype {v} is not a valid type (e.g. \"Union[str, int]\")")
+                raise SkillArgException(
+                    f'dtype {v} is not a valid type (e.g. "Union[str, int]")'
+                )
         except Exception as e:
-            raise SkillArgException(f"dtype {v} is not a valid type (e.g. \"Union[str, int]\"): {e}")
+            raise SkillArgException(
+                f'dtype {v} is not a valid type (e.g. "Union[str, int]"): {e}'
+            )
         return v
 
     @model_validator(mode="before")
@@ -50,6 +56,22 @@ class SkillArgAttr(BaseModel):
             raise SkillArgException(
                 "If 'required' is set to True, 'default' must be None"
             )
+        return values
+
+    @model_validator(mode="after")
+    def default_correct_dtype(cls, values: "SkillArgAttr") -> "SkillArgAttr":
+        dtype = values.dtype
+        default = values.default
+        if default is not None:
+            eval_type = eval(
+                dtype,
+                {"__builtins__": __builtins__},
+                {"typing": typing, **vars(typing)},
+            )
+            if not isinstance(default, eval_type):
+                raise SkillArgException(
+                    f"default value {default} is not of type {dtype}"
+                )
         return values
 
 
@@ -135,6 +157,8 @@ class FunctionCallSkill(ABC):
 
         for arg in self.function_args:
             if arg.name in input_args:
+                if not isinstance(input_args[arg.name], eval(arg.dtype)):
+                    return f'Invalid input: argument "{arg.name}" must be of type {arg.dtype}'
                 parsed_args[arg.name] = input_args[arg.name]
             elif arg.required and not arg.default:
                 return f'Invalid input: missing required argument "{arg.name}"'
@@ -186,4 +210,6 @@ class SkillMap:
         return [skill["function_callable"] for skill in self.skill_map.values()]
 
     def get_function_description_by_name(self, skill_name: str) -> str:
-        return str(self.skill_map[skill_name]["function_dict"]["function"])
+        return str(
+            self.skill_map[skill_name]["function_dict"]["function"]["description"]
+        )
