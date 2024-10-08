@@ -43,7 +43,7 @@ class AgentFlowOpenAI(Workflow):
                     self.skill_map.get_function_callable_by_name(func),
                     metadata=ToolMetadata(
                         name=func,
-                        description=self.skill_map.get_function_description_by_name(
+                        description=self.skill_map.get_function_dict_by_name(
                             func
                         ),
                     ),
