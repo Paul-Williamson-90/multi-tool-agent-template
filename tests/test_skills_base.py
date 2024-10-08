@@ -285,5 +285,7 @@ def test_skill_map_get_list_of_function_callables(case_skill_map):
 
 def test_skill_map_get_function_dict_by_name(case_skill_map):
     skill_map: SkillMap = case_skill_map[0]
-    skill: MockFunctionCallSkill = case_skill_map[1]
-    assert skill_map.get_function_dict_by_name("test") == "{'name': 'test', 'description': 'This is a test skill', 'parameters': {'type': 'object', 'properties': {'arg1': {'type': 'Union[str, int]', 'description': 'This is an argument'}}, 'required': ['arg1']}}"
+    assert (
+        skill_map.get_function_dict_by_name("test")
+        == "{'name': 'test', 'description': 'This is a test skill', 'parameters': {'type': 'object', 'properties': {'arg1': {'type': 'Union[str, int]', 'description': 'This is an argument'}}, 'required': ['arg1']}}"
+    )
