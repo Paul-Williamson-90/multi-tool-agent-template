@@ -6,3 +6,8 @@ scratchpad.ipynb
 */__pycache__/
 */*/__pycache__/
 .pymon
+monitor.db
+coverage.json
+.coverage
+.coverage.*
+test-results/
