@@ -25,10 +25,6 @@ class SkillArgAttr(BaseModel):
 
     @field_validator("dtype")
     def dtype_validation(cls, v: str) -> Any:
-        if not isinstance(v, str):
-            raise SkillArgException(
-                'dtype must be a string of a valid type (e.g. "Union[str, int]")'
-            )
         try:
             eval_type = eval(
                 v, {"__builtins__": __builtins__}, {"typing": typing, **vars(typing)}
@@ -173,7 +169,6 @@ class FunctionCallSkill(ABC):
         Abstract method that should be implemented by the child class.
         This method should contain the logic of the function that the skill is supposed to execute.
         """
-        ...
 
 
 class SkillMap:

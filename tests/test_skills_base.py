@@ -75,9 +75,9 @@ def test_skill_arg_attr():
     with pytest.raises(SkillArgException):
         skill_arg = SkillArgAttr(
             name="arg1",
-            dtype="Union[str, int]",
+            dtype="str",
             description="This is an argument",
-            required=True,
+            required=False,
             default=4.56,
         )
 
