@@ -1,4 +1,5 @@
 from typing import Union
+import inspect
 
 from llama_index.core.llms import ChatMessage
 from llama_index.core.memory import ChatMemoryBuffer
@@ -105,8 +106,11 @@ class AgentFlowOpenAI(Workflow):
                 function_callable = self.skill_map.get_function_callable_by_name(
                     function_name
                 )
-
-                function_result = function_callable(arguments)
+                
+                if inspect.iscoroutinefunction(function_callable):
+                    function_result = await function_callable(arguments)
+                else:
+                    function_result = function_callable(arguments)
 
             except KeyError:
                 function_result = "Error: Unknown function call"

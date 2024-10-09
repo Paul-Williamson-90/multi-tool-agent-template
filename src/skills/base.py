@@ -160,11 +160,54 @@ class FunctionCallSkill(ABC):
                 return f'Invalid input: missing required argument "{arg.name}"'
             else:
                 parsed_args[arg.name] = arg.default
-
+        
         return self.execute(**parsed_args)
 
     @abstractmethod
     def execute(self) -> str:
+        """
+        Abstract method that should be implemented by the child class.
+        This method should contain the logic of the function that the skill is supposed to execute.
+        """
+
+
+class FunctionCallSkillAsync(FunctionCallSkill, ABC):
+
+    async def handle_router_input(self, args: dict[str, Any]) -> str:
+        """
+        This method is used to handle the input from the LLM router agent.
+        It will call the execute method and return the result.
+
+        Args:
+        - args: dict[str, Any] - input from the LLM router agent
+
+        Returns:
+        - str - result of the execute method
+        """
+        if len(self.function_args) == 0:
+            return await self.execute()
+
+        if isinstance(args, dict) and "input" in args:
+            input_args = args["input"]
+        else:
+            return 'Invalid input: expected a dictionary with the key "input" that\'s value is a dictionary.'
+
+        parsed_args: dict[str, Any] = dict()
+
+        for arg in self.function_args:
+            if arg.name in input_args:
+                if not isinstance(input_args[arg.name], eval(arg.dtype)):
+                    return f'Invalid input: argument "{arg.name}" must be of type {arg.dtype}'
+                parsed_args[arg.name] = input_args[arg.name]
+            elif arg.required and not arg.default:
+                return f'Invalid input: missing required argument "{arg.name}"'
+            else:
+                parsed_args[arg.name] = arg.default
+        
+        return await self.execute(**parsed_args)
+
+    @abstractmethod
+    async def execute(self) -> str:
         """
         Abstract method that should be implemented by the child class.
         This method should contain the logic of the function that the skill is supposed to execute.

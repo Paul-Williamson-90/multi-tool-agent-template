@@ -13,6 +13,7 @@ from src.skills.base import (
     SkillMap,
     FunctionCallSkill,
     SkillArgException,
+    FunctionCallSkillAsync,
 )
 
 
@@ -215,6 +216,57 @@ def test_function_call_skill_handle_router_input(case_function_call_skill):
     skill_arg.required = False
     expected = "test_successful"
     assert skill.handle_router_input({"input": {}}) == expected
+
+class MockFunctionCallSkillAsync(FunctionCallSkillAsync):
+    async def execute(self, *args, **kwargs) -> str:
+        return "test_successful"
+
+@pytest.fixture
+def case_function_call_skill_async() -> tuple[MockFunctionCallSkillAsync, SkillArgAttr]:
+    skill_arg = SkillArgAttr(
+        name="arg1",
+        dtype="Union[str, int]",
+        description="This is an argument",
+        required=True,
+        default=None,
+    )
+    skill = MockFunctionCallSkillAsync(
+        name="test", description="This is a test skill", function_args=[skill_arg]
+    )
+    return (skill, skill_arg)
+
+
+@pytest.mark.asyncio
+async def test_function_call_skill_handle_router_input_async(case_function_call_skill_async):
+    # no args
+    skill = MockFunctionCallSkillAsync(
+        name="test", description="This is a test skill", function_args=[]
+    )
+    assert await skill.handle_router_input({}) == "test_successful"
+
+    # no input key
+    skill: MockFunctionCallSkillAsync = case_function_call_skill_async[0]
+    skill_arg: SkillArgAttr = case_function_call_skill_async[1]
+    expected = 'Invalid input: expected a dictionary with the key "input" that\'s value is a dictionary.'
+    assert await skill.handle_router_input({}) == expected
+
+    # fully successful
+    expected = "test_successful"
+    assert await skill.handle_router_input({"input": {skill_arg.name: "test"}}) == expected
+
+    # missing arg
+    expected = 'Invalid input: missing required argument "arg1"'
+    assert await skill.handle_router_input({"input": {}}) == expected
+
+    # wrong arg type
+    expected = 'Invalid input: argument "arg1" must be of type Union[str, int]'
+    assert await skill.handle_router_input({"input": {skill_arg.name: [4.56]}}) == expected
+
+    # default arg
+    skill_arg.default = "default"
+    skill_arg.required = False
+    expected = "test_successful"
+    assert await skill.handle_router_input({"input": {}}) == expected
 
 
 @pytest.fixture
