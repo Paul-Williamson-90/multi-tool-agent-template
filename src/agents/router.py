@@ -99,9 +99,13 @@ class AgentFlowOpenAI(Workflow):
             # TODO: Add try and except to catch errors and instruct the router to better construct the message
             if "input" in arguments:
                 arguments = arguments.pop("input")
-                assert arguments[0] == "{"
-                assert arguments[-1] == "}"
-                arguments = {"input": eval(arguments)}
+                if arguments:
+                    assert arguments[0] == "{"
+                    assert arguments[-1] == "}"
+                    arguments = eval(arguments)
+                else:
+                    arguments = {}
+                arguments = {"input": arguments}
             try:
                 function_callable = self.skill_map.get_function_callable_by_name(
                     function_name
