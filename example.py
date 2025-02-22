@@ -1,11 +1,18 @@
-import asyncio
-from typing import Union
-from src.skills.base import SkillArgAttr, FunctionCallSkill, SkillMap
-from src.agents.router import AgentFlowOpenAI
-from llama_index.llms.openai import OpenAI
-
-from dotenv import load_dotenv
 import os
+import asyncio
+import logging
+from dotenv import load_dotenv
+from typing import Union
+
+from llama_index.llms.openai import OpenAI
+from llama_index.core.memory import ChatMemoryBuffer
+
+from src.skills.base import SkillArgAttr, FunctionCallSkill, SkillMap
+from src.agents.router import RouterAgent
+
+
+# show INFO logs
+logging.basicConfig(level=logging.INFO)
 
 
 class Multiply(FunctionCallSkill):
@@ -40,16 +47,16 @@ load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 llm = OpenAI(api_key=OPENAI_API_KEY, temperature=0.1)
+memory = ChatMemoryBuffer(token_limit=40000).from_defaults(llm=llm)
 skillmap = SkillMap(skills=[Multiply()])
 
 
 async def example_test(input: str) -> str:
-    workflow = AgentFlowOpenAI(llm=llm, skill_map=skillmap, model="gpt-4o")
+    workflow = RouterAgent(llm=llm, skill_map=skillmap, memory=memory)
     res = await workflow.run(input=input)
     return res
 
-
-user_input = input("Provide two numbers for multiplication: ")
-user_input = "Multiply these two numbers: " + user_input
-res = asyncio.run(example_test(user_input))
-print("LLM:", res)
+while True:
+    user_input = input("User: ")
+    res = asyncio.run(example_test(user_input))
+    print("LLM:", res)

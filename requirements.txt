@@ -1,7 +1,7 @@
-openai==1.51.0
+openai==1.63.2
 pydantic==2.9.2
 python-dotenv==1.0.1
-llama-index==0.11.16
+llama-index==0.12.16
 openinference_instrumentation_openai==0.1.19
 pytest==8.3.3
 pytest-cov==5.0.0
