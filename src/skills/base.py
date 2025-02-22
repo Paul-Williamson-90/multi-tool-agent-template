@@ -1,7 +1,7 @@
 import typing
 from typing import Any, Callable, Union, Optional
 import inspect
-from pydantic import BaseModel, model_validator, field_validator
+from pydantic import BaseModel, model_validator, field_validator, TypeAdapter
 from abc import ABC, abstractmethod
 
 from src.skills.errors import SkillArgException
@@ -55,20 +55,36 @@ class SkillArgAttr(BaseModel):
         return values
 
     @model_validator(mode="after")
-    def default_correct_dtype(cls, values: "SkillArgAttr") -> "SkillArgAttr":
-        dtype = values.dtype
-        default = values.default
+    def default_correct_dtype(self) -> "SkillArgAttr":
+        dtype = self.dtype
+        default = self.default
         if default is not None:
             eval_type = eval(
                 dtype,
                 {"__builtins__": __builtins__},
                 {"typing": typing, **vars(typing)},
             )
-            if not isinstance(default, eval_type):
+            adapter = TypeAdapter(eval_type)
+            try:
+                adapter.validate_python(default)
+            except Exception as _:
                 raise SkillArgException(
                     f"default value {default} is not of type {dtype}"
                 )
-        return values
+        return self
+    
+    def validate_input_arg(self, input: Any) -> bool:
+        try:
+            eval_type = eval(
+                self.dtype,
+                {"__builtins__": __builtins__},
+                {"typing": typing, **vars(typing)},
+            )
+            adapter = TypeAdapter(eval_type)
+            adapter.validate_python(input)
+            return True
+        except Exception as _:
+            return False
 
 
 class FunctionCallSkill(ABC):
@@ -130,7 +146,7 @@ class FunctionCallSkill(ABC):
     def get_function_callable(self) -> Callable:
         return self.function_callable
 
-    def handle_router_input(self, args: dict[str, Any]) -> str:
+    def handle_router_input(self, input: dict[str, Any]) -> str:
         """
         This method is used to handle the input from the LLM router agent.
         It will call the execute method and return the result.
@@ -144,70 +160,24 @@ class FunctionCallSkill(ABC):
         if len(self.function_args) == 0:
             return self.execute()
 
-        if isinstance(args, dict) and "input" in args:
-            input_args = args["input"]
-        else:
-            return 'Invalid input: expected a dictionary with the key "input" that\'s value is a dictionary.'
+        input_args = input
 
         parsed_args: dict[str, Any] = dict()
 
         for arg in self.function_args:
             if arg.name in input_args:
-                if not isinstance(input_args[arg.name], eval(arg.dtype)):
+                if not arg.validate_input_arg(input_args[arg.name]):
                     return f'Invalid input: argument "{arg.name}" must be of type {arg.dtype}'
                 parsed_args[arg.name] = input_args[arg.name]
             elif arg.required and not arg.default:
                 return f'Invalid input: missing required argument "{arg.name}"'
             else:
                 parsed_args[arg.name] = arg.default
-        
+
         return self.execute(**parsed_args)
 
     @abstractmethod
     def execute(self) -> str:
-        """
-        Abstract method that should be implemented by the child class.
-        This method should contain the logic of the function that the skill is supposed to execute.
-        """
-
-
-class FunctionCallSkillAsync(FunctionCallSkill, ABC):
-
-    async def handle_router_input(self, args: dict[str, Any]) -> str:
-        """
-        This method is used to handle the input from the LLM router agent.
-        It will call the execute method and return the result.
-
-        Args:
-        - args: dict[str, Any] - input from the LLM router agent
-
-        Returns:
-        - str - result of the execute method
-        """
-        if len(self.function_args) == 0:
-            return await self.execute()
-
-        if isinstance(args, dict) and "input" in args:
-            input_args = args["input"]
-        else:
-            return 'Invalid input: expected a dictionary with the key "input" that\'s value is a dictionary.'
-
-        parsed_args: dict[str, Any] = dict()
-
-        for arg in self.function_args:
-            if arg.name in input_args:
-                if not isinstance(input_args[arg.name], eval(arg.dtype)):
-                    return f'Invalid input: argument "{arg.name}" must be of type {arg.dtype}'
-                parsed_args[arg.name] = input_args[arg.name]
-            elif arg.required and not arg.default:
-                return f'Invalid input: missing required argument "{arg.name}"'
-            else:
-                parsed_args[arg.name] = arg.default
-        
-        return await self.execute(**parsed_args)
-
-    @abstractmethod
-    async def execute(self) -> str:
         """
         Abstract method that should be implemented by the child class.
         This method should contain the logic of the function that the skill is supposed to execute.
@@ -223,15 +193,13 @@ class SkillMap:
         Args:
         - skills: list[FunctionCallSkill] - list of FunctionCallSkill objects
         """
-        self.skill_map: dict[
-            str, dict[str, Union[Callable, dict[str, dict[str, Union[str, dict]]]]]
-        ] = dict()
+        self.skill_map: dict[str, dict[str, Any]] = dict()
         for skill in skills:
             self.skill_map[skill.get_function_name()] = {
                 "function_dict": skill.get_function_dict(),
                 "function_callable": skill.get_function_callable(),
             }
-
+        
     def get_function_callable_by_name(self, skill_name: str) -> Callable:
         return self.skill_map[skill_name]["function_callable"]
 
