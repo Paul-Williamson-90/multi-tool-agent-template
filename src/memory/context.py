@@ -484,6 +484,9 @@ class ContextInFocusBase(ABC):
         """
         Extracts information from the context.
 
+        The brief provided should be framed as instructions on what sort of facts should be extracted from contexts on an
+        individual basis. 
+
         Parameters:
         -----------
         index: int
