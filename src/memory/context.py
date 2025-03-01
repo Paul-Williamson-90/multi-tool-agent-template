@@ -156,7 +156,7 @@ class Context(ABC):
         self.index = index
         self.content: Optional[list[Content]] = content
         self.context = context
-        self.loaded: bool = True if content else False
+        self._loaded: bool = True if content else False
         self._pages = _pages
         self._count = _count
 
@@ -183,7 +183,7 @@ class Context(ABC):
         - _pages
         - _count
 
-        NOTE: You must set self.loaded to True after loading the context.
+        NOTE: You must set self._loaded to True after loading the context.
 
         Parameters:
         -----------
@@ -224,7 +224,7 @@ class Context(ABC):
         page: int
             Page number to show.
         """
-        if not self.loaded:
+        if not self._loaded:
             self.load_from_session_id_index(self.session_id, self.index)
 
         if len(self.content) == 0:
@@ -250,7 +250,7 @@ class Context(ABC):
         --------
         str
         """
-        if not self.loaded:
+        if not self._loaded:
             self.load_from_session_id_index(self.session_id, self.index)
 
         response = ""
@@ -333,7 +333,7 @@ class Context(ABC):
         str
             Response generated from the brief.
         """
-        if not self.loaded:
+        if not self._loaded:
             self.load_from_session_id_index(self.session_id, self.index)
 
         tasks = [
