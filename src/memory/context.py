@@ -183,6 +183,8 @@ class Context(ABC):
         - _pages
         - _count
 
+        NOTE: You must set self.loaded to True after loading the context.
+
         Parameters:
         -----------
         session_id: str
