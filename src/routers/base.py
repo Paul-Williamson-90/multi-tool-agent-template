@@ -39,6 +39,7 @@ logger = logging.getLogger(__name__)
 
 class RouterAgent(Workflow):
     _generation_kwargs: dict[str, Any] = {"max_tokens": 4000}
+    _tool_selection_kwargs: dict[str, Any] = {"max_tokens": 500}
     _rounds_limit: int = 5
     _round: int = 1
 
@@ -158,7 +159,7 @@ class RouterAgent(Workflow):
             llm=self.llm,
             context=context,
             pydantic_object=ToolCallResponse,
-            llm_kwargs=self._generation_kwargs,
+            llm_kwargs=self._tool_selection_kwargs,
         )
 
         logger.info(f"[{self.chat_id}]: RouterAgent tool call: {response.output}")
