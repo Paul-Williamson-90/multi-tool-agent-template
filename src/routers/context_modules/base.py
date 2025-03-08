@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from uuid import UUID
-from typing import Type
+from typing import Type, Optional
 from textwrap import dedent
 
 import pandas as pd
@@ -8,10 +8,52 @@ from llama_index.core.llms.llm import LLM
 
 from src.routers.context_modules.context.base import Context
 from src.routers.context_modules.pydantics import ContextInfo, ExtractedFacts
+from src.routers.skills import SkillOutput
+from src.routers.skills.base import FunctionCallSkill, SkillArgAttr
 
 
 ContextType = Type[Context]
 ContextModuleType = Type["ContextModuleBase"]
+
+
+class VerifyContext(FunctionCallSkill):
+    def __init__(
+        self,
+        context_module: ContextModuleType,
+        function_args: Optional[list[SkillArgAttr]] = [
+            SkillArgAttr(
+                name="context_id",
+                dtype="str",
+                description="The ID of the context to verify.",
+                required=True,
+            ),
+            SkillArgAttr(
+                name="query",
+                dtype="str",
+                description="The query to verify the context with.",
+                required=True,
+            ),
+        ],
+        visible_to_human: bool = False,
+    ):
+        name = f"{context_module.get_name()}_verify"
+        description = (
+            f"Verify whether a {context_module.get_name()} stored context contains information "
+            "you need for providing a response back to the user."
+        )
+        super().__init__(
+            name=name,
+            description=description,
+            function_args=function_args,
+            visible_to_human=visible_to_human,
+        )
+        self.context_module = context_module
+
+    def execute(self, context_id: str, query: str) -> SkillOutput:
+        response = self.context_module.summarise_from_context(context_id, query)
+        return SkillOutput(
+            response_to_llm=response,
+        )
 
 
 class ContextModuleBase(ABC):
@@ -33,6 +75,7 @@ class ContextModuleBase(ABC):
         self.name = name
         self.context: dict[str, ContextType] = {}
         self._load_context(chat_id)
+        self.verify_tool = VerifyContext(self)
 
     @abstractmethod
     def _load_context(self, chat_id: UUID):

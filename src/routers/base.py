@@ -39,10 +39,7 @@ logger = logging.getLogger(__name__)
 
 
 class RouterAgent(Workflow):
-    _generation_kwargs: dict[str, Any] = {"max_tokens": 4000}
-    _tool_selection_kwargs: dict[str, Any] = {"max_tokens": 500}
-    _rounds_limit: int = 5
-    _round: int = 1
+    _round: int = (0,)
 
     def __init__(
         self,
@@ -54,6 +51,9 @@ class RouterAgent(Workflow):
         timeout: int = 300,
         system_prompt: str = SYSTEM_PROMPT,
         chat_id: Optional[uuid.UUID] = None,
+        generation_kwargs: dict[str, Any] = {"max_tokens": 4000},
+        tool_selection_kwargs: dict[str, Any] = {"max_tokens": 500},
+        rounds_limit: int = 8,
     ):
         self.chat_id = chat_id or uuid.uuid4()
         logger.info(f"[{self.chat_id}]: Initializing RouterAgent")
@@ -69,6 +69,9 @@ class RouterAgent(Workflow):
         self.context_modules: dict[str, CondenseModuleType] = (
             self._prepare_context_modules(context_modules)
         )
+        self._generation_kwargs: dict[str, Any] = generation_kwargs
+        self._tool_selection_kwargs: dict[str, Any] = tool_selection_kwargs
+        self._rounds_limit: int = rounds_limit
 
     @step
     async def prepare_agent(self, ev: StartEvent) -> RouterInputEvent:
@@ -254,4 +257,12 @@ class RouterAgent(Workflow):
     def _prepare_context_modules(
         self, context_modules: list[CondenseModuleType]
     ) -> dict[str, CondenseModuleType]:
-        return {module.get_name(): module for module in context_modules}
+        module_dict: dict[str, CondenseModuleType] = {}
+        for module in context_modules:
+            if module.get_name() in module_dict:
+                raise ValueError(
+                    f"Duplicate context module name found: {module.get_name()}"
+                )
+            module_dict[module.get_name()] = module
+            self.skill_map.add_skill(module.verify_tool)
+        return module_dict

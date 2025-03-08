@@ -214,14 +214,17 @@ class SkillMap:
         Args:
         - skills: list[FunctionCallSkill] - list of FunctionCallSkill objects
         """
-        self.skill_map: dict[str, dict[str, Any]] = dict()
+        self.skill_map: dict = dict()
         for skill in skills:
-            self.skill_map[skill.get_function_name()] = {
-                "function_dict": skill.get_function_dict(),
-                "function_callable": skill.get_function_callable(),
-                "visible_to_human": skill.visible_to_human,
-            }
+            self.add_skill(skill)
         self._add_available_tools_to_map()
+
+    def add_skill(self, skill: FunctionCallSkill):
+        self.skill_map[skill.get_function_name()] = {
+            "function_dict": skill.get_function_dict(),
+            "function_callable": skill.get_function_callable(),
+            "visible_to_human": skill.visible_to_human,
+        }
 
     def _add_available_tools_to_map(self):
         if any(self.skill_map[skill]["visible_to_human"] for skill in self.skill_map):
