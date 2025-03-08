@@ -6,3 +6,6 @@ openinference_instrumentation_openai==0.1.19
 pytest==8.3.3
 pytest-cov==5.0.0
 pytest-asyncio==0.24.0
+mypy==1.15.0
+pandas_stubs==2.2.3
+pre_commit==4.1.0

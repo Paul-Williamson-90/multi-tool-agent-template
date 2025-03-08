@@ -1,26 +1,20 @@
 # Project Template for Multi-Tool LLM Agents with Llama-Index
+A multi-tool agent template with Llama-Index using the Workflow event-driven architecture. This template has been extended with some custom functionality designed for various use-cases I've had to design for.
 
-# Instructions
-- View example.py for a working example of how to use the multi-tool agent router and provide new skills to it.
-- You will need to create a .env in the root of the project folder with the following keys:
-```
-OPENAI_API_KEY=...
-```
+**NOTE: This repo was recently updated with some new functionality and is yet to be fully implemented / tested.**
 
-# Code Base Explained
-## src.agents.router.RouterAgent
-This class is the router LLM that will receive a text input, and return a response. It has tools available to it via 'Skills' which are defined by the programmer and passed via the SkillMap class (src.skills.base.SkillMap).
-## src.skills.base.FunctionCallSkill
-This class is a parent class for 'Skills' which can be passed to the router LLM and available for use when answering input text queries. 
-- def execute(self, args) -> str: The core method which the router LLM will use when activating the tool.
-## src.skills.base.SkillArgAttr
-Pydantic class for handling arg attributes for a FunctionCallSkill. The attributes are used to inform the router LLM on how to use the tool available to it, and what args are required/available.
-## src.skills.base.SkillMap
+# Tenplate Explained
+## RouterAgent (src.routers.base.RouterAgent)
+This class is the router LLM that will receive a text input, and return a response. It has tools available to it via 'Skills' which are defined by the programmer and passed via the SkillMap class. Additionally, the router agent can be fitted with a condense_module for condensing the chat history (improved context window management) and ensuring the user's message has relevant context from prior messages. Finally, context_modules can be added for managing large retrieved context.
+
+## FunctionCallSkill (src.routers.skills.base.FunctionCallSkill)
+This class is a parent class for 'Skills' which can be passed to the router LLM and available for use when answering input text queries.
+
+## SkillMap (src.routers.skills.base.SkillMap)
 A class for hosting multiple skills and provided to the router LLM.
 
-# Creating a New Skill
-- example.py has an example of defining a new skill (multiplication) and adding it to the LLM router's toolkit.
-- When the LLM router chooses a skill, it will create a structured output (JSON) in string form as its written response and triggers the use of a tool. The args for the chosen tool are contained in the "input" key of the resulting dictionary (as can be seen on src.agents.router.RouterAgent.tool_call_handler).
-- The args are parsed via src.skills.base.FunctionCallSkill.handle_router_input and then passed to the execute method.
-- The src.skills.base.SkillArgAttr objects passed to the src.skills.base.FunctionCallSkill class you create define what args the LLM router should add to the tool call.
-- To create a new skill, create a class that inherits from the src.skills.base.FunctionCallSkill. All you need to ensure is that the src.skills.base.SkillArgAttr objects passed to your Skill match those that are required for running the execute method you define. 
+## CondenseModuleBase (src.routers.condensers.CondenseModuleBase)
+The parent class for defining the process for condensing the chat history to only the relevant information to the current user query, as well as re-writing the user's query to solve issues of where the user uses presupposition.
+
+## ContextModuleBase (src.routers.context_modules.ContextModuleBase)
+Parent class for memory modules that the router agent can access during response generation. The intention of this class is for use with large context retrieval (such as documents from a database). The class ensures that the retrieved context does not impair the router agent's reasoning process by only showing the retrieved context during the response step. The router agent also has tools to verify if the context contains the information it seeks, and uses concurrent fact extraction to condense the documents to only the relevant information the router agent needs in a response.
