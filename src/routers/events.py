@@ -20,3 +20,7 @@ class RouterToolSelectionEvent(Event):
 
 class RouterEscapeEvent(Event):
     hint: str
+
+
+class RouterContextSelectionEvent(Event):
+    pass

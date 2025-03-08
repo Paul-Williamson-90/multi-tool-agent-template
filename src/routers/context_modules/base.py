@@ -154,3 +154,6 @@ class ContextModuleBase(ABC):
     def get_short_references_by_context_id(self, context_id: str) -> list[str]:
         context = self.retrieve_context_by_id(context_id)
         return context.get_short_references()
+
+    def __len__(self) -> int:
+        return sum([context.count for context in self.context.values()])

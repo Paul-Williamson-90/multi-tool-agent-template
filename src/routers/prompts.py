@@ -16,6 +16,16 @@ TOOL_DECISION_INSTRUCTIONS = """# Instructions
 """
 
 
+CONTEXT_SELECTION_INSTRUCTIONS = """# Instructions
+- **Select the context you want to use to generate a response back to the user using the schema defined below.**
+- **If you do not need any additional information to generate a useful response to the user, do not select any contexts.**
+- **As part of context selection, you will need to specify the type of facts you want to extract from the context \
+that will be useful for generating a response to the user.**
+- **Once selected, the information extracted from the contexts will be provided to you at a later stage.**
+- **You can select multiple contexts if needed.**
+"""
+
+
 RESPONSE_INSTRUCTIONS = PromptTemplate(
     dedent(
         """# SYSTEM\n

@@ -71,3 +71,57 @@ class ToolCallResponse(BaseModel):
 
     def as_msg(self) -> ChatMessage:
         return ChatMessage(content=str(self.output), user=MessageRole.ASSISTANT)
+
+
+class ContextExtraction(BaseModel):
+    """
+    Use this schema to select a context in memory to extract facts from which will be useful for generating a response to the user.
+    The sort of instructions for extraction should be the type of content you would like to extract from the context.
+
+    Attributes:
+        memory_object: str - The name of the context memory object that contains the context_id you would like to extract facts from.
+        context_id: str - The context_id you would like to extract facts from.
+        instructions: str - The instructions you would like to provide to the LLM for extracting facts from the context.
+    """
+
+    memory_object: str
+    context_id: str
+    instructions: str
+
+    def __str__(self) -> str:
+        return f"Memory Object: {self.memory_object}\nContext ID: {self.context_id}"
+
+
+class ContextSelection(BaseModel):
+    """
+    Use this schema to select contexts that are held in memory with specific instructions as to the sort of information you would like to \
+    extract from the context.
+
+    Attributes:
+        contexts: list[ContextExtraction] - The contexts you would like to extract facts from, default is an empty list.
+    """
+
+    contexts: list[ContextExtraction] = []
+
+    def as_msg(self) -> ChatMessage:
+        requests = "- " + "\n- ".join([str(context) for context in self.contexts])
+        content = (
+            f"I will use the following contexts to extract facts from:\n{requests}"
+        )
+        return ChatMessage(
+            content=content,
+            role=MessageRole.ASSISTANT,
+        )
+
+
+class SelectedContext(BaseModel):
+    question: str
+    facts: str
+    memory_object: str
+    context_id: str
+
+    def __str__(self) -> str:
+        return (
+            f"# {self.memory_object}: {self.context_id}\n"
+            f"Question: {self.question}\nExtracted Facts:\n{self.facts}"
+        )

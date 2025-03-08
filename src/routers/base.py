@@ -4,6 +4,7 @@ import inspect
 import logging
 from datetime import datetime
 
+from tenacity import retry, stop_after_attempt, wait_fixed, before_log
 from llama_index.core.llms import ChatMessage
 from llama_index.core.memory import ChatMemoryBuffer
 from llama_index.core.workflow import StartEvent, StopEvent, Workflow, step
@@ -16,8 +17,15 @@ from src.routers.events import (
     RouterResponseEvent,
     RouterToolSelectionEvent,
     RouterEscapeEvent,
+    RouterContextSelectionEvent,
 )
-from src.routers.pydantics import PlanningStep, ToolCallResponse, NextAction
+from src.routers.pydantics import (
+    PlanningStep,
+    ToolCallResponse,
+    NextAction,
+    ContextSelection,
+    SelectedContext,
+)
 from src.routers.prompts import (
     SYSTEM_PROMPT,
     ROUTER_AGENT_PROMPT_TEMPLATE,
@@ -27,11 +35,12 @@ from src.routers.prompts import (
     ERROR_HINT,
     RESPONSE_INSTRUCTIONS,
     TOOL_DECISION_INSTRUCTIONS,
+    CONTEXT_SELECTION_INSTRUCTIONS,
 )
 from src.routers.skills import SkillMap, SkillOutput
 from src.routers.constants import DEFAULT_TOKEN_LIMIT
 from src.routers.condensers import CondenseModuleType
-from src.routers.context_modules import ContextModuleType, ContextType
+from src.routers.context_modules import ContextModuleType
 from src.invocations import structured_invocation, non_structured_invocation
 
 
@@ -89,7 +98,9 @@ class RouterAgent(Workflow):
     @step
     async def router(
         self, ev: RouterInputEvent
-    ) -> Union[RouterResponseEvent, RouterEscapeEvent, RouterToolSelectionEvent]:
+    ) -> Union[
+        RouterContextSelectionEvent, RouterEscapeEvent, RouterToolSelectionEvent
+    ]:
         logger.info(f"[{self.chat_id}]: RouterAgent router")
         self._round += 1
 
@@ -97,14 +108,8 @@ class RouterAgent(Workflow):
             return RouterEscapeEvent(hint=ROUNDS_EXCEEDED_HINT)
 
         try:
-            condensed = self.condense_module(self.memory)
-            thoughts = self._gather_thoughts()
-            context = ROUTER_AGENT_PROMPT_TEMPLATE.format(
-                chat_history=str(condensed),
-                system=self.system_prompt,
-                tools=self.skill_map.info,
-                thoughts=thoughts,
-                instructions=ACTION_DECISION_INSTRUCTIONS,
+            context = self._structured_response_template(
+                instructions=ACTION_DECISION_INSTRUCTIONS
             )
             response: PlanningStep = structured_invocation(
                 llm=self.llm,
@@ -121,9 +126,22 @@ class RouterAgent(Workflow):
         self.internal_memory.put(response.as_msg())
 
         if next_action == NextAction.RESPONSE:
-            return RouterResponseEvent()
+            return RouterContextSelectionEvent()
         else:
             return RouterToolSelectionEvent()
+
+    @step
+    async def context_selection(
+        self, ev: RouterContextSelectionEvent
+    ) -> RouterResponseEvent:
+        logger.info(f"[{self.chat_id}]: RouterAgent context selection")
+
+        if len(self.context_modules) == 0:
+            return RouterResponseEvent()
+        if sum([len(module)] for module in self.context_modules.values()) == 0:
+            return RouterResponseEvent()
+
+        return self._context_selection()
 
     @step
     async def response(self, ev: RouterResponseEvent) -> StopEvent:
@@ -149,15 +167,8 @@ class RouterAgent(Workflow):
     async def tool_selection(self, ev: RouterToolSelectionEvent) -> ToolCallEvent:
         logger.info(f"[{self.chat_id}]: RouterAgent tool selection")
 
-        condensed = self.condense_module(self.memory)
-        thoughts = self._gather_thoughts()
-
-        context = ROUTER_AGENT_PROMPT_TEMPLATE.format(
-            chat_history=str(condensed),
-            system=self.system_prompt,
-            tools=self.skill_map.info,
-            thoughts=thoughts,
-            instructions=TOOL_DECISION_INSTRUCTIONS,
+        context = self._structured_response_template(
+            instructions=TOOL_DECISION_INSTRUCTIONS
         )
 
         response: ToolCallResponse = structured_invocation(
@@ -266,3 +277,65 @@ class RouterAgent(Workflow):
             module_dict[module.get_name()] = module
             self.skill_map.add_skill(module.verify_tool)
         return module_dict
+
+    def _structured_response_template(self, instructions: str) -> str:
+        condensed = self.condense_module(self.memory)
+        thoughts = self._gather_thoughts()
+
+        context = ROUTER_AGENT_PROMPT_TEMPLATE.format(
+            chat_history=str(condensed),
+            system=self.system_prompt,
+            tools=self.skill_map.info,
+            thoughts=thoughts,
+            instructions=instructions,
+        )
+        return context
+
+    @retry(
+        stop=stop_after_attempt(5),
+        wait=wait_fixed(1),
+        before=before_log(logger, logging.INFO),
+    )
+    def _context_selection(self) -> RouterResponseEvent:
+        context = self._structured_response_template(
+            instructions=CONTEXT_SELECTION_INSTRUCTIONS
+        )
+
+        response: ContextSelection = structured_invocation(
+            llm=self.llm,
+            context=context,
+            pydantic_object=ContextSelection,
+            llm_kwargs=self._tool_selection_kwargs,
+        )
+
+        if len(response.contexts) == 0:
+            return RouterResponseEvent()
+
+        self.internal_memory.put(response.as_msg())
+
+        extraction_requests = response.contexts
+
+        extracted_facts: list[SelectedContext] = []
+        for request in extraction_requests:
+            question = request.instructions
+            facts = self.context_modules[request.memory_object].extract_from_context(
+                request.context_id, question
+            )
+            extracted_facts.append(
+                SelectedContext(
+                    question=question,
+                    facts=facts,
+                    memory_object=request.memory_object,
+                    context_id=request.context_id,
+                )
+            )
+
+        self.internal_memory.put(
+            ChatMessage(
+                content="\n\n".join([str(fact) for fact in extracted_facts]),
+                role=MessageRole.TOOL,
+                additional_kwargs={"tool_call_id": "context_retrieval"},
+            )
+        )
+
+        return RouterResponseEvent()
