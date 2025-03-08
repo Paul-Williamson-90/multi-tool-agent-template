@@ -1,4 +1,4 @@
-from typing import Union, Any, Optional, Literal
+from typing import Union, Any, Optional
 import inspect
 import logging
 import json
@@ -10,12 +10,20 @@ from tenacity import retry, stop_after_attempt, wait_fixed
 from llama_index.core.llms import ChatMessage
 from llama_index.core.memory import ChatMemoryBuffer
 from llama_index.core.tools import ToolSelection
-from llama_index.core.workflow import Event, StartEvent, StopEvent, Workflow, step
+from llama_index.core.workflow import StartEvent, StopEvent, Workflow, step
 from llama_index.core.llms.llm import LLM
 from llama_index.core.base.llms.types import MessageRole, CompletionResponse
 from llama_index.core import PromptTemplate
 
-from src.prompt_templates.router_template import (
+from src.routers.events import (
+    RouterInputEvent, 
+    ToolCallEvent, 
+    RouterResponseEvent, 
+    RouterToolSelectionEvent,
+    RouterEscapeEvent
+)
+from src.routers.pydantics import ResponseType, ToolCallResponse
+from src.routers.prompts import (
     SYSTEM_PROMPT,
     USER_INTENT_CONDENSE,
     CHAT_HISTORY_CONDENSE,
@@ -33,61 +41,6 @@ from src.skills.base import SkillMap
 
 
 logger = logging.getLogger(__name__)
-
-
-class Step(BaseModel):
-    """
-    Use this schema to think through the problem step-by-step before generating your response/action.
-
-    Attributes:
-        - thought: str - Your thoughts on what you need to do / any considerations you need to make.
-        - conclusion: str - The conclusion you've come to after thinking through your thoughts.
-    """
-
-
-class ResponseType(BaseModel):
-    """
-    Use this schema to synthesize your thoughts and decide on generating a response OR action tool calls to gather more information \
-    to better generate a response to the user. Your decision process should be based on critical evaluation on whether you have enough \
-    information to response to the user or whether you need to call a tool to gather more information.
-    - If you need to call a tool, you should outline the reasons why and how you would use the tool in your thought process.
-    - If you have all the information you need to response to the user, you should plan your response in your thought process.
-    
-    Attributes:
-        - steps: list[Step] - Your step-by-step thought process for planning your response or tool calls.
-        - next_action: Literal["tool_call", "response"] - The next action you need to take. If you need to call a tool, set this to \
-        "tool_call". If you have all the information you need to response to the user, set this to "response".
-    """
-
-    steps: list[Step]
-    next_action: Literal["tool_call", "response"]
-
-    def __str__(self) -> str:
-        result = "\n".join([str(step) for step in self.steps])
-        return result
-
-
-class ToolCallResponse(BaseModel):
-    """
-    Use this schema to select the toold to call based on your thought process prior.
-
-    Attributes:
-        output: list[ToolSelection] - The tools you would like to call based on your thought process.
-    """
-
-    output: list[ToolSelection]
-
-    def __str__(self) -> str:
-        result = f"Output: {[str(tool) for tool in self.output]}"
-        return result
-
-
-class ToolCallEvent(Event):
-    tool_calls: list[ToolSelection]
-
-
-class RouterInputEvent(Event):
-    input: list[ChatMessage]
 
 
 class RouterAgent(Workflow):
@@ -145,7 +98,7 @@ class RouterAgent(Workflow):
         messages: list[ChatMessage] = ev.input
 
         if self._round > self._rounds_limit:
-            return self._escape_route(ROUNDS_EXCEEDED_HINT)
+            return RouterEscapeEvent(hint=ROUNDS_EXCEEDED_HINT)
 
         try:
             response: ResponseType = self._structured_invocation(
@@ -157,46 +110,60 @@ class RouterAgent(Workflow):
 
         except Exception as e:
             logger.error("RouterAgent encountered an error: %s", e)
-            return self._escape_route(ERROR_HINT)
+            return RouterEscapeEvent(hint=ERROR_HINT)
 
         next_action = response.next_action
         if next_action == "response":
-            chat_history = self._chat_history_from_messages(messages)
-            output = self._non_structured_invocation(
-                RESPONSE_INSTRUCTIONS,
-                {
-                    "chat_history": chat_history,
-                    "thoughts": str(response),
-                    "system": self.system_prompt,
-                },
-                self._generation_kwargs,
-            )
-            self.memory.put(
-                ChatMessage(content=str(output), role=MessageRole.ASSISTANT)
-            )
-            return StopEvent(result=output)
+            return RouterResponseEvent(messages=messages, response=response)
 
         else:
-            tool_response: ToolCallResponse = self._structured_invocation(
-                messages,
-                TOOL_DECISION_INSTRUCTIONS,
-                ToolCallResponse,
-                self._condense_kwargs,
-                thoughts=str(response),
-            )
-            output_tool = tool_response.output
-            logger.info("RouterAgent tool calls: %s", output_tool)
+            return RouterToolSelectionEvent(messages=messages, response=response)
+        
+    @step
+    async def response(self, ev: RouterResponseEvent) -> StopEvent:
+        messages = ev.messages
+        response = ev.response
 
-            self._internal_memory.put(
-                ChatMessage(content=str(response), role=MessageRole.ASSISTANT)
-            )
+        chat_history = self._chat_history_from_messages(messages)
+        output = self._non_structured_invocation(
+            RESPONSE_INSTRUCTIONS,
+            {
+                "chat_history": chat_history,
+                "thoughts": str(response),
+                "system": self.system_prompt,
+            },
+            self._generation_kwargs,
+        )
+        self.memory.put(
+            ChatMessage(content=str(output), role=MessageRole.ASSISTANT)
+        )
+        return StopEvent(result=output)
+        
+    @step
+    async def tool_selection(self, ev: RouterToolSelectionEvent) -> ToolCallEvent:
+        messages = ev.messages
+        response = ev.response
 
-            self._internal_memory.put(
-                ChatMessage(content=str(tool_response), role=MessageRole.ASSISTANT)
-            )
+        tool_response: ToolCallResponse = self._structured_invocation(
+            messages,
+            TOOL_DECISION_INSTRUCTIONS,
+            ToolCallResponse,
+            self._condense_kwargs,
+            thoughts=str(response),
+        )
+        output_tool = tool_response.output
+        logger.info("RouterAgent tool calls: %s", output_tool)
 
-            self._condensed = None
-            return ToolCallEvent(tool_calls=output_tool)
+        self._internal_memory.put(
+            ChatMessage(content=str(response), role=MessageRole.ASSISTANT)
+        )
+
+        self._internal_memory.put(
+            ChatMessage(content=str(tool_response), role=MessageRole.ASSISTANT)
+        )
+
+        self._condensed = None
+        return ToolCallEvent(tool_calls=output_tool)
 
     @step
     async def tool_call_handler(self, ev: ToolCallEvent) -> RouterInputEvent:
@@ -239,69 +206,12 @@ class RouterAgent(Workflow):
 
         return RouterInputEvent(input=self._internal_memory.get_all())
 
-    def _get_user_intent(self) -> str:
-        logger.info("Getting user intent")
-        last_n_msgs = self.memory.get_all()[-self._n_msgs_user_intent :]
-        last_n_msgs_str = "\n".join([str(msg) for msg in last_n_msgs])
-        user_msg = self._get_users_last_message()
-        if str(user_msg) not in last_n_msgs_str:
-            last_n_msgs_str = f"{user_msg}\n{last_n_msgs_str}"
-        user_last_message = self._non_structured_invocation(
-            USER_INTENT_CONDENSE,
-            {"system": self.system_prompt, "chat_history": last_n_msgs_str},
-            self._condense_kwargs,
-        )
-        return user_last_message
-
-    def _condense_chat_history(self) -> str:
-        logger.info("Condensing chat history")
-        user_last_message = self._user_intent or self._get_user_intent()
-        msgs_to_condense = self.memory.get_all()
-        internal_msgs = self._internal_memory.get_all()[len(msgs_to_condense) :]
-        condensed = ""
-        for batch in range(0, len(msgs_to_condense), self._condence_batch_size):
-            batch_str = "\n".join(
-                [
-                    str(msg)
-                    for msg in msgs_to_condense[
-                        batch : batch + self._condence_batch_size
-                    ]
-                ]
-            )
-            response = self._non_structured_invocation(
-                CHAT_HISTORY_CONDENSE,
-                {
-                    "user_last_message": user_last_message,
-                    "condensed": condensed
-                    if condensed != ""
-                    else "No messages have been condensed yet.",
-                    "current_message": batch_str,
-                },
-                self._condense_kwargs,
-            )
-            condensed += "\n" + response
-
-        condensed = CONDENSED_TEMPLATE.format(
-            condensed=condensed,
-            user_last_message=user_last_message,
-            thoughts="\n".join([str(msg) for msg in internal_msgs]),
-        )
-        return condensed
-
-    def _chat_history_from_messages(self, messages: list[ChatMessage]) -> str:
-        logger.info(f"RouterAgent has {len(messages)} in the chat history so far.")
-        if len(messages) <= self._n_msgs_condense_trigger:
-            return "\n".join([str(msg) for msg in messages])
-        return self._condensed or self._condense_chat_history()
-
-    def _get_users_last_message(self) -> str:
-        return str(self.memory.get_all()[-1])
-
-    def _tool_metadata_str(self) -> str:
-        return "\n\n".join(str(tool) for tool in self.tools)
-
-    def _escape_route(self, hint: str) -> StopEvent:
+    @step
+    async def escape_route(self, ev: RouterEscapeEvent) -> StopEvent:
         logger.info("RouterAgent has reached the escape route.")
+
+        hint = ev.hint
+
         internal_msgs = self._internal_memory.get_all()
         user_last_msg = self._get_users_last_message()
         output = self._non_structured_invocation(
@@ -376,3 +286,64 @@ class RouterAgent(Workflow):
         logger.info(response_str)
 
         return response_str
+
+    def _get_user_intent(self) -> str:
+        logger.info("Getting user intent")
+        last_n_msgs = self.memory.get_all()[-self._n_msgs_user_intent :]
+        last_n_msgs_str = "\n".join([str(msg) for msg in last_n_msgs])
+        user_msg = self._get_users_last_message()
+        if str(user_msg) not in last_n_msgs_str:
+            last_n_msgs_str = f"{user_msg}\n{last_n_msgs_str}"
+        user_last_message = self._non_structured_invocation(
+            USER_INTENT_CONDENSE,
+            {"system": self.system_prompt, "chat_history": last_n_msgs_str},
+            self._condense_kwargs,
+        )
+        return user_last_message
+
+    def _condense_chat_history(self) -> str:
+        logger.info("Condensing chat history")
+        user_last_message = self._user_intent or self._get_user_intent()
+        msgs_to_condense = self.memory.get_all()
+        internal_msgs = self._internal_memory.get_all()[len(msgs_to_condense) :]
+        condensed = ""
+        for batch in range(0, len(msgs_to_condense), self._condence_batch_size):
+            batch_str = "\n".join(
+                [
+                    str(msg)
+                    for msg in msgs_to_condense[
+                        batch : batch + self._condence_batch_size
+                    ]
+                ]
+            )
+            response = self._non_structured_invocation(
+                CHAT_HISTORY_CONDENSE,
+                {
+                    "user_last_message": user_last_message,
+                    "condensed": condensed
+                    if condensed != ""
+                    else "No messages have been condensed yet.",
+                    "current_message": batch_str,
+                },
+                self._condense_kwargs,
+            )
+            condensed += "\n" + response
+
+        condensed = CONDENSED_TEMPLATE.format(
+            condensed=condensed,
+            user_last_message=user_last_message,
+            thoughts="\n".join([str(msg) for msg in internal_msgs]),
+        )
+        return condensed
+
+    def _chat_history_from_messages(self, messages: list[ChatMessage]) -> str:
+        logger.info(f"RouterAgent has {len(messages)} in the chat history so far.")
+        if len(messages) <= self._n_msgs_condense_trigger:
+            return "\n".join([str(msg) for msg in messages])
+        return self._condensed or self._condense_chat_history()
+
+    def _get_users_last_message(self) -> str:
+        return str(self.memory.get_all()[-1])
+
+    def _tool_metadata_str(self) -> str:
+        return "\n\n".join(str(tool) for tool in self.tools)
