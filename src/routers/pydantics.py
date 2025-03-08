@@ -1,7 +1,9 @@
-from typing import Literal
+from enum import Enum
 
 from pydantic import BaseModel
 from llama_index.core.tools import ToolSelection
+from llama_index.core.llms import ChatMessage
+from llama_index.core.base.llms.types import MessageRole
 
 
 class Step(BaseModel):
@@ -19,9 +21,14 @@ class Step(BaseModel):
     def __str__(self) -> str:
         result = f"<thought>{self.thought}</thought>\n<conclusion>{self.conclusion}</conclusion>"
         return result
+    
+
+class NextAction(Enum):
+    TOOL_CALL = "tool_call"
+    RESPONSE = "response"
 
 
-class ResponseType(BaseModel):
+class PlanningStep(BaseModel):
     """
     Use this schema to synthesize your thoughts and decide on generating a response OR action tool calls to gather more information \
     to better generate a response to the user. Your decision process should be based on critical evaluation on whether you have enough \
@@ -36,11 +43,17 @@ class ResponseType(BaseModel):
     """
 
     steps: list[Step]
-    next_action: Literal["tool_call", "response"]
+    next_action: NextAction
 
     def __str__(self) -> str:
         result = "\n".join([str(step) for step in self.steps])
         return result
+    
+    def as_msg(self) -> ChatMessage:
+        return ChatMessage(
+            content="\n".join([str(step) for step in self.steps]),
+            user=MessageRole.ASSISTANT
+        )
 
 
 class ToolCallResponse(BaseModel):
@@ -51,8 +64,13 @@ class ToolCallResponse(BaseModel):
         output: list[ToolSelection] - The tools you would like to call based on your thought process.
     """
 
-    output: list[ToolSelection]
+    output: ToolSelection
 
     def __str__(self) -> str:
-        result = f"Output: {[str(tool) for tool in self.output]}"
-        return result
+        return str(self.output)
+    
+    def as_msg(self) -> ChatMessage:
+        return ChatMessage(
+            content=str(self.output),
+            user=MessageRole.ASSISTANT
+        )

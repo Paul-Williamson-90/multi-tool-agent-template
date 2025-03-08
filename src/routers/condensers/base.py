@@ -1,9 +1,12 @@
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Optional, Type
 from enum import Enum
 
 from pydantic import BaseModel
 from llama_index.core.memory import ChatMemoryBuffer
+
+
+CondenseModuleType = Type["CondenseModuleBase"]
 
 
 class TriggerMode(Enum):
@@ -15,6 +18,11 @@ class CondensedChat(BaseModel):
     user_intent: str
     condensed: str
 
+    def __str__(self) -> str:
+        return (
+            f"# CHAT HISTORY:\n<chat_history>{self.condensed}</chat_history>\n\n"
+            f"# USER'S LAST MESSAGE:\n<user_intent>{self.user_intent}</user_intent>"
+        )
 
 class CondenseModuleBase(ABC):
 
@@ -47,13 +55,18 @@ class CondenseModuleBase(ABC):
         return chat_history._token_count_for_messages() >= self.n_tokens_trigger
 
     def __call__(self, chat_history: ChatMemoryBuffer) -> CondensedChat:
+        if len(chat_history.get_all()) > 1:
+            user_intent = self.get_user_intent(chat_history)
+        else:
+            user_intent = str(chat_history.get_all()[-1])
+
         if self._trigger(chat_history):
             return CondensedChat(
-                user_intent=self.user_intent or self.get_user_intent(chat_history),
-                condensed=self.condensed or self.condense_chat_history(chat_history)
+                user_intent=user_intent,
+                condensed=self.condense_chat_history(chat_history)
             )
         return CondensedChat(
-            user_intent=self.user_intent or self.get_user_intent(chat_history),
+            user_intent=user_intent,
             condensed="\n".join([str(msg) for msg in chat_history[:-1]])
         )
 
