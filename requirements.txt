@@ -11,3 +11,4 @@ mypy==1.15.0
 pandas_stubs==2.2.3
 isort==6.0.1
 pre_commit==4.1.0
+black==25.1.0

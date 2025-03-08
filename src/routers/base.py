@@ -15,17 +15,32 @@ from src.invocations import non_structured_invocation, structured_invocation
 from src.routers.condensers import CondenseModuleBase
 from src.routers.constants import DEFAULT_TOKEN_LIMIT
 from src.routers.context_modules import ContextModuleBase
-from src.routers.events import (RouterContextSelectionEvent, RouterEscapeEvent,
-                                RouterInputEvent, RouterResponseEvent,
-                                RouterToolSelectionEvent, ToolCallEvent)
-from src.routers.prompts import (ACTION_DECISION_INSTRUCTIONS,
-                                 CONTEXT_SELECTION_INSTRUCTIONS, ERROR_HINT,
-                                 ESCAPE_PROMPT, RESPONSE_INSTRUCTIONS,
-                                 ROUNDS_EXCEEDED_HINT,
-                                 ROUTER_AGENT_PROMPT_TEMPLATE, SYSTEM_PROMPT,
-                                 TOOL_DECISION_INSTRUCTIONS)
-from src.routers.pydantics import (ContextSelection, NextAction, PlanningStep,
-                                   SelectedContext, ToolCallResponse)
+from src.routers.events import (
+    RouterContextSelectionEvent,
+    RouterEscapeEvent,
+    RouterInputEvent,
+    RouterResponseEvent,
+    RouterToolSelectionEvent,
+    ToolCallEvent,
+)
+from src.routers.prompts import (
+    ACTION_DECISION_INSTRUCTIONS,
+    CONTEXT_SELECTION_INSTRUCTIONS,
+    ERROR_HINT,
+    ESCAPE_PROMPT,
+    RESPONSE_INSTRUCTIONS,
+    ROUNDS_EXCEEDED_HINT,
+    ROUTER_AGENT_PROMPT_TEMPLATE,
+    SYSTEM_PROMPT,
+    TOOL_DECISION_INSTRUCTIONS,
+)
+from src.routers.pydantics import (
+    ContextSelection,
+    NextAction,
+    PlanningStep,
+    SelectedContext,
+    ToolCallResponse,
+)
 from src.routers.skills import SkillMap, SkillOutput
 
 logger = logging.getLogger(__name__)
@@ -59,9 +74,9 @@ class RouterAgent(Workflow):
         self.system_prompt: str = self._prepare_system_prompt(system_prompt)
         self.memory: ChatMemoryBuffer = self._prepare_chat_memory(chat_history)
         self.internal_memory: ChatMemoryBuffer = self._prepare_internal_memory()
-        self.context_modules: dict[str, ContextModuleBase] = (
-            self._prepare_context_modules(context_modules)
-        )
+        self.context_modules: dict[
+            str, ContextModuleBase
+        ] = self._prepare_context_modules(context_modules)
         self._generation_kwargs: dict[str, Any] = generation_kwargs
         self._tool_selection_kwargs: dict[str, Any] = tool_selection_kwargs
         self._rounds_limit: int = rounds_limit

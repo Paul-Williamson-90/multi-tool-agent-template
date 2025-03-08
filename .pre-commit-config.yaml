@@ -9,12 +9,16 @@ repos:
     rev: v0.0.241  # Use the latest version
     hooks:
       - id: ruff
-        args: ["--fix", "--ignore=E501"]
+        args: ["--fix"]
 
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v0.910  # Use the latest version
     hooks:
       - id: mypy
         args: ["--install-types", "--non-interactive"]
-        env:
-          MYPYPATH: "./"
+
+  - repo: https://github.com/psf/black
+    rev: 23.3.0  # Specify the version you want to use (check for the latest version)
+    hooks:
+      - id: black
+        language_version: python3  # Specify the Python version
