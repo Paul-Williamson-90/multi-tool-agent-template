@@ -24,7 +24,11 @@ DEFAULT_STRUCTURED_PROMPT_TEMPLATE = PromptTemplate(
 )
 
 
-@retry(stop=stop_after_attempt(5), wait=wait_fixed(1), before=before_log(logger, logging.INFO))
+@retry(
+    stop=stop_after_attempt(5),
+    wait=wait_fixed(1),
+    before=before_log(logger, logging.INFO),
+)
 def structured_invocation(
     llm: LLM,
     context: str,
@@ -45,15 +49,17 @@ def structured_invocation(
     return response_object
 
 
-@retry(stop=stop_after_attempt(5), wait=wait_fixed(1), before=before_log(logger, logging.INFO))
+@retry(
+    stop=stop_after_attempt(5),
+    wait=wait_fixed(1),
+    before=before_log(logger, logging.INFO),
+)
 def non_structured_invocation(
     llm: LLM,
     prompt: str,
     inference_kwargs: dict[str, Any] = {},
 ) -> str:
-    response: CompletionResponse = llm.complete(
-        prompt=prompt, **inference_kwargs
-    )
+    response: CompletionResponse = llm.complete(prompt=prompt, **inference_kwargs)
     response_str = str(response)
 
     return response_str

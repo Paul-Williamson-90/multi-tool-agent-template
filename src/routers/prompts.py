@@ -67,8 +67,10 @@ ESCAPE_PROMPT = PromptTemplate(
 )
 
 
-ROUNDS_EXCEEDED_HINT = "You are struggling to find the relevant data to answer the user's query. \
+ROUNDS_EXCEEDED_HINT = (
+    "You are struggling to find the relevant data to answer the user's query. \
 Suggest the user to provide more context or rephrase their query."
+)
 
 
 ERROR_HINT = "You seem to be running into issues, ask the user to try again or provide more context."

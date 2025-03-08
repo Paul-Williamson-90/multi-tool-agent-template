@@ -14,12 +14,13 @@ class Fact(BaseModel):
     reference: str
         The reference string of the context the fact was extracted from.
     """
+
     fact: str
     reference: str
 
     def __str__(self) -> str:
         return f"- {self.fact} (Reference: {self.reference})"
-    
+
 
 class ExtractedFacts(BaseModel):
     """
@@ -30,20 +31,21 @@ class ExtractedFacts(BaseModel):
     facts: List[Fact]
         The list of facts extracted from the context, default is an empty list.
     """
+
     facts: list[Fact] = []
 
     def __str__(self) -> str:
         return "\n".join([str(fact) for fact in self.facts])
-    
+
     def __len__(self) -> int:
         return len(self.facts)
-    
+
 
 class ContextInfo(BaseModel):
     """
     Schema for storing information on what a collection of context contains.
     This is purely for display purposes to the RouterAgent.
-    
+
     Attributes:
     -----------
     context_id: UUID
@@ -55,6 +57,7 @@ class ContextInfo(BaseModel):
     context: str
         Context of what the collection contains.
     """
+
     context_id: UUID
     source: str
     num_records: int

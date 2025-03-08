@@ -14,14 +14,14 @@ class Step(BaseModel):
         - thought: str - Your thoughts on what you need to do / any considerations you need to make.
         - conclusion: str - The conclusion you've come to after thinking through your thoughts.
     """
-    
+
     thought: str
     conclusion: str
 
     def __str__(self) -> str:
         result = f"<thought>{self.thought}</thought>\n<conclusion>{self.conclusion}</conclusion>"
         return result
-    
+
 
 class NextAction(Enum):
     TOOL_CALL = "tool_call"
@@ -48,11 +48,11 @@ class PlanningStep(BaseModel):
     def __str__(self) -> str:
         result = "\n".join([str(step) for step in self.steps])
         return result
-    
+
     def as_msg(self) -> ChatMessage:
         return ChatMessage(
             content="\n".join([str(step) for step in self.steps]),
-            user=MessageRole.ASSISTANT
+            user=MessageRole.ASSISTANT,
         )
 
 
@@ -68,9 +68,6 @@ class ToolCallResponse(BaseModel):
 
     def __str__(self) -> str:
         return str(self.output)
-    
+
     def as_msg(self) -> ChatMessage:
-        return ChatMessage(
-            content=str(self.output),
-            user=MessageRole.ASSISTANT
-        )
+        return ChatMessage(content=str(self.output), user=MessageRole.ASSISTANT)

@@ -24,15 +24,17 @@ class CondensedChat(BaseModel):
             f"# USER'S LAST MESSAGE:\n<user_intent>{self.user_intent}</user_intent>"
         )
 
-class CondenseModuleBase(ABC):
 
+class CondenseModuleBase(ABC):
     def __init__(
-            self,
-            n_msg_trigger: Optional[int] = None,
-            n_tokens_trigger: Optional[int] = None, 
-        ):
+        self,
+        n_msg_trigger: Optional[int] = None,
+        n_tokens_trigger: Optional[int] = None,
+    ):
         if not any([n_msg_trigger, n_tokens_trigger]):
-            raise ValueError("At least one of n_msg_trigger or n_tokens_trigger must be provided")
+            raise ValueError(
+                "At least one of n_msg_trigger or n_tokens_trigger must be provided"
+            )
         self.n_msg_trigger = n_msg_trigger
         self.n_tokens_trigger = n_tokens_trigger
         self.trigger_mode: TriggerMode = (
@@ -63,11 +65,11 @@ class CondenseModuleBase(ABC):
         if self._trigger(chat_history):
             return CondensedChat(
                 user_intent=user_intent,
-                condensed=self.condense_chat_history(chat_history)
+                condensed=self.condense_chat_history(chat_history),
             )
         return CondensedChat(
             user_intent=user_intent,
-            condensed="\n".join([str(msg) for msg in chat_history[:-1]])
+            condensed="\n".join([str(msg) for msg in chat_history[:-1]]),
         )
 
     def reset_condensed(self):

@@ -66,17 +66,16 @@ CONDENSED_TEMPLATE = """# CHAT HISTORY:
 
 
 class StandardCondenser(CondenseModuleBase):
-
     _user_intent_kwargs: dict[str, Any] = {"max_tokens": 300}
     _condense_kwargs: dict[str, Any] = {"max_tokens": 1000}
 
     def __init__(
-            self,
-            llm: LLM,
-            n_msg_trigger: Optional[int] = 5,
-            n_tokens_trigger: Optional[int] = None,
-            n_msgs_user_intent: int = 6,
-            condense_batch_size: int = 2,
+        self,
+        llm: LLM,
+        n_msg_trigger: Optional[int] = 5,
+        n_tokens_trigger: Optional[int] = None,
+        n_msgs_user_intent: int = 6,
+        condense_batch_size: int = 2,
     ):
         super().__init__(n_msg_trigger, n_tokens_trigger)
         self.llm = llm
@@ -88,7 +87,7 @@ class StandardCondenser(CondenseModuleBase):
             return self.user_intent
         history = chat_history.get_all().copy()
         user_msg = history.pop()
-        last_n_msgs = history[-self._n_msgs_user_intent:]
+        last_n_msgs = history[-self._n_msgs_user_intent :]
         user_intent = non_structured_invocation(
             llm=self.llm,
             prompt=USER_INTENT_CONDENSE.format(
@@ -99,17 +98,19 @@ class StandardCondenser(CondenseModuleBase):
         )
         self.user_intent = str(user_intent)
         return self.user_intent
-    
-    def _extract_relevant(self, messages: list[str], condensed: str, user_intent: str) -> str:
-        batch_str = "\n".join(
-            [str(msg) for msg in messages]
-        )
+
+    def _extract_relevant(
+        self, messages: list[str], condensed: str, user_intent: str
+    ) -> str:
+        batch_str = "\n".join([str(msg) for msg in messages])
         response = non_structured_invocation(
             llm=self.llm,
             prompt=CHAT_HISTORY_CONDENSE.format(
                 user_last_message=user_intent,
                 condensed=(
-                    condensed if condensed != "" else "No messages have been condensed yet."
+                    condensed
+                    if condensed != ""
+                    else "No messages have been condensed yet."
                 ),
                 current_message=batch_str,
             ),
@@ -123,9 +124,9 @@ class StandardCondenser(CondenseModuleBase):
         condensed = ""
         for batch in range(0, len(messages), self._condense_batch_size):
             response = self._extract_relevant(
-                messages[batch : batch + self._condense_batch_size], 
+                messages[batch : batch + self._condense_batch_size],
                 condensed,
-                user_intent
+                user_intent,
             )
             if "NO RELEVANT INFORMATION" not in response:
                 condensed += "\n" + response

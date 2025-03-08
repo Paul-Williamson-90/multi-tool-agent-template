@@ -36,9 +36,9 @@ class SkillArgAttr(BaseModel):
     def dtype_validation(cls, v: str) -> Any:
         try:
             eval_type = eval(
-                v, 
-                {"__builtins__": __builtins__}, 
-                {"typing": typing, "uuid": uuid, **vars(typing)}
+                v,
+                {"__builtins__": __builtins__},
+                {"typing": typing, "uuid": uuid, **vars(typing)},
             )
             if not any(
                 [
@@ -84,7 +84,7 @@ class SkillArgAttr(BaseModel):
                     f"default value {default} is not of type {dtype}"
                 )
         return self
-    
+
     def validate_input_arg(self, input: Any) -> bool:
         try:
             eval_type = eval(
@@ -185,13 +185,13 @@ class FunctionCallSkill(ABC):
                     return SkillOutput(
                         response_to_llm=f'Invalid input: argument "{arg.name}" must be of type {arg.dtype}'
                     )
-                
+
                 parsed_args[arg.name] = input_args[arg.name]
             elif arg.required and not arg.default:
                 return SkillOutput(
                     response_to_llm=f'Invalid input: missing required argument "{arg.name}"'
                 )
-            
+
             else:
                 parsed_args[arg.name] = arg.default
 
@@ -224,10 +224,7 @@ class SkillMap:
         self._add_available_tools_to_map()
 
     def _add_available_tools_to_map(self):
-        if any(
-            self.skill_map[skill]["visible_to_human"]
-            for skill in self.skill_map
-        ):
+        if any(self.skill_map[skill]["visible_to_human"] for skill in self.skill_map):
             self.skill_map["available_tools"] = {
                 "function_dict": {
                     "type": "function",
@@ -253,7 +250,10 @@ class SkillMap:
         content = "**Here are the tools that you have available:**\n\n"
         for skill in self.skill_map:
             if self.skill_map[skill]["visible_to_human"]:
-                content += self.skill_map[skill]["function_dict"]["function"]["description"] + "\n\n"
+                content += (
+                    self.skill_map[skill]["function_dict"]["function"]["description"]
+                    + "\n\n"
+                )
         content += (
             "**When reporting back to the user, you must provide a more user-friendly description of the tools"
             " for non-technical audience.**\n"
@@ -262,7 +262,7 @@ class SkillMap:
             "the necessary context (e.g. avoid ambiguity, try not to use acronyms, etc.).**"
         )
         return SkillOutput(response_to_llm=content)
-        
+
     def get_function_callable_by_name(self, skill_name: str) -> Callable:
         return self.skill_map[skill_name]["function_callable"]
 
@@ -279,9 +279,7 @@ class SkillMap:
         return [skill["function_callable"] for skill in self.skill_map.values()]
 
     def get_function_dict_by_name(self, skill_name: str) -> str:
-        return str(
-            self.skill_map[skill_name]["function_dict"]["function"]
-        )
+        return str(self.skill_map[skill_name]["function_dict"]["function"])
 
     @property
     def info(self) -> str:

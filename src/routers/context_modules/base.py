@@ -22,10 +22,10 @@ class ContextModuleBase(ABC):
     )
 
     def __init__(
-            self,
-            chat_id: UUID,
-            llm: LLM,
-            name: str,
+        self,
+        chat_id: UUID,
+        llm: LLM,
+        name: str,
     ):
         self.chat_id = chat_id
         self.llm = llm
@@ -58,7 +58,7 @@ class ContextModuleBase(ABC):
         if len(self.context) == 0:
             info += f"**The {self.name} is empty, retrieve data first to add it to the {self.name}.**"
             return info
-        
+
         info_segments: list[ContextInfo] = []
         for _, context in self.context.items():
             info_segments.append(context.info)
@@ -69,35 +69,41 @@ class ContextModuleBase(ABC):
 
         info = dedent(info)
         return info
-    
+
     def check_context_by_id(self, context_id: str) -> bool:
         return context_id in self.context
-    
+
     def retrieve_context_by_id(self, context_id: str) -> ContextType:
         self._existance_check(context_id)
         return self.context.get(context_id)
-    
+
     def _existance_check(self, context_id: str):
         if len(self.context) == 0:
-            raise ValueError(f"The {self.name} is empty, retrieve data first to add it to the {self.name}.")
+            raise ValueError(
+                f"The {self.name} is empty, retrieve data first to add it to the {self.name}."
+            )
         if not self.check_context_by_id(context_id):
             raise ValueError(f"Context with ID {context_id} not found in {self.name}.")
         return
-    
+
     def show_context_by_index_and_reference(
-            self, context_id: str, references: list[str],
+        self,
+        context_id: str,
+        references: list[str],
     ) -> str:
         context = self.retrieve_context_by_id(context_id)
         return context.get_content_by_reference(references)
-    
-    def extract_from_context(self, context_id: str, instructions: str) -> ExtractedFacts:
+
+    def extract_from_context(
+        self, context_id: str, instructions: str
+    ) -> ExtractedFacts:
         context = self.retrieve_context_by_id(context_id)
         return context.extract(instructions, self.llm)
-    
+
     def summarise_from_context(self, context_id: str, query: str) -> str:
         context = self.retrieve_context_by_id(context_id)
         return context.summarise(query, self.llm)
-    
+
     def get_short_references_by_context_id(self, context_id: str) -> list[str]:
         context = self.retrieve_context_by_id(context_id)
         return context.get_short_references()

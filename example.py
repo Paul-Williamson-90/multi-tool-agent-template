@@ -56,6 +56,7 @@ async def example_test(input: str) -> str:
     res = await workflow.run(input=input)
     return res
 
+
 while True:
     user_input = input("User: ")
     res = asyncio.run(example_test(user_input))

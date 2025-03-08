@@ -11,11 +11,11 @@ from llama_index.core.llms.llm import LLM
 from llama_index.core.base.llms.types import MessageRole
 
 from src.routers.events import (
-    RouterInputEvent, 
-    ToolCallEvent, 
-    RouterResponseEvent, 
+    RouterInputEvent,
+    ToolCallEvent,
+    RouterResponseEvent,
     RouterToolSelectionEvent,
-    RouterEscapeEvent
+    RouterEscapeEvent,
 )
 from src.routers.pydantics import PlanningStep, ToolCallResponse, NextAction
 from src.routers.prompts import (
@@ -55,9 +55,9 @@ class RouterAgent(Workflow):
     ):
         self.chat_id = chat_id or uuid.uuid4()
         logger.info(f"[{self.chat_id}]: Initializing RouterAgent")
-        
+
         super().__init__(timeout=timeout)
-        
+
         self.llm: LLM = llm
         self.skill_map: SkillMap = skill_map
         self.condense_module: CondenseModuleType = condense_module
@@ -68,7 +68,7 @@ class RouterAgent(Workflow):
     @step
     async def prepare_agent(self, ev: StartEvent) -> RouterInputEvent:
         logger.info(f"[{self.chat_id}]: Preparing RouterAgent")
-        
+
         self._round = 0
         self.condense_module.reset()
         self.internal_memory.reset()
@@ -79,7 +79,9 @@ class RouterAgent(Workflow):
         return RouterInputEvent()
 
     @step
-    async def router(self, ev: RouterInputEvent) -> Union[RouterResponseEvent, RouterEscapeEvent, RouterToolSelectionEvent]:
+    async def router(
+        self, ev: RouterInputEvent
+    ) -> Union[RouterResponseEvent, RouterEscapeEvent, RouterToolSelectionEvent]:
         logger.info(f"[{self.chat_id}]: RouterAgent router")
         self._round += 1
 
@@ -114,7 +116,7 @@ class RouterAgent(Workflow):
             return RouterResponseEvent()
         else:
             return RouterToolSelectionEvent()
-        
+
     @step
     async def response(self, ev: RouterResponseEvent) -> StopEvent:
         logger.info(f"[{self.chat_id}]: RouterAgent response")
@@ -132,14 +134,9 @@ class RouterAgent(Workflow):
             ),
             inference_kwargs=self._generation_kwargs,
         )
-        self.memory.put(
-            ChatMessage(
-                content=str(output), 
-                role=MessageRole.ASSISTANT
-            )
-        )
+        self.memory.put(ChatMessage(content=str(output), role=MessageRole.ASSISTANT))
         return StopEvent(result=output)
-        
+
     @step
     async def tool_selection(self, ev: RouterToolSelectionEvent) -> ToolCallEvent:
         logger.info(f"[{self.chat_id}]: RouterAgent tool selection")
@@ -225,7 +222,7 @@ class RouterAgent(Workflow):
             )
         )
         return RouterResponseEvent()
-    
+
     def _prepare_system_prompt(self, system_prompt: str) -> str:
         if "{date}" in system_prompt:
             system_prompt = system_prompt.format(
@@ -238,11 +235,13 @@ class RouterAgent(Workflow):
         internal_memory.put_messages(self.memory.get_all())
         return internal_memory
 
-    def _prepare_chat_memory(self, memory: Optional[ChatMemoryBuffer] = None) -> ChatMemoryBuffer:
-        return (
-            memory or ChatMemoryBuffer(token_limit=DEFAULT_TOKEN_LIMIT).from_defaults(llm=self.llm)
-        )
-    
+    def _prepare_chat_memory(
+        self, memory: Optional[ChatMemoryBuffer] = None
+    ) -> ChatMemoryBuffer:
+        return memory or ChatMemoryBuffer(
+            token_limit=DEFAULT_TOKEN_LIMIT
+        ).from_defaults(llm=self.llm)
+
     def _gather_thoughts(self) -> str:
         thoughts = self.internal_memory.get_all()
         return "\n".join([str(msg) for msg in thoughts])
