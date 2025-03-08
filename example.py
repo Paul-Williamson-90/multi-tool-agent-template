@@ -8,7 +8,7 @@ from llama_index.llms.openai import OpenAI
 from llama_index.core.memory import ChatMemoryBuffer
 
 from src.skills.base import SkillArgAttr, FunctionCallSkill, SkillMap
-from src.agents.router import RouterAgent
+from src.routers.base import RouterAgent
 
 
 # show INFO logs

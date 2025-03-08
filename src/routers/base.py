@@ -39,6 +39,9 @@ from src.routers.prompts import (
     TOOL_DECISION_INSTRUCTIONS,
 )
 from src.skills.base import SkillMap
+from src.routers.constants import (
+    DEFAULT_TOKEN_LIMIT
+)
 
 
 logger = logging.getLogger(__name__)
@@ -74,23 +77,6 @@ class RouterAgent(Workflow):
         self.system_prompt: str = self._prepare_system_prompt(system_prompt)
         self.memory: ChatMemoryBuffer = self._prepare_chat_memory(chat_history)
         self.internal_memory: ChatMemoryBuffer = self._prepare_internal_memory()
-
-    def _prepare_system_prompt(self, system_prompt: str) -> str:
-        if "{date}" in system_prompt:
-            system_prompt = system_prompt.format(
-                date=datetime.now().strftime("%Y-%m-%d")
-            )
-        return system_prompt
-
-    def _prepare_internal_memory(self) -> ChatMemoryBuffer:
-        internal_memory: ChatMemoryBuffer = self._prepare_chat_memory()
-        internal_memory.put_messages(self.memory.get_all())
-        return internal_memory
-
-    def _prepare_chat_memory(self, memory: Optional[ChatMemoryBuffer] = None) -> ChatMemoryBuffer:
-        return (
-            memory or ChatMemoryBuffer(token_limit=40000).from_defaults(llm=self.llm)
-        )
 
     @step
     async def prepare_agent(self, ev: StartEvent) -> RouterInputEvent:
@@ -356,3 +342,20 @@ class RouterAgent(Workflow):
 
     def _get_users_last_message(self) -> str:
         return str(self.memory.get_all()[-1])
+    
+    def _prepare_system_prompt(self, system_prompt: str) -> str:
+        if "{date}" in system_prompt:
+            system_prompt = system_prompt.format(
+                date=datetime.now().strftime("%Y-%m-%d")
+            )
+        return system_prompt
+
+    def _prepare_internal_memory(self) -> ChatMemoryBuffer:
+        internal_memory: ChatMemoryBuffer = self._prepare_chat_memory()
+        internal_memory.put_messages(self.memory.get_all())
+        return internal_memory
+
+    def _prepare_chat_memory(self, memory: Optional[ChatMemoryBuffer] = None) -> ChatMemoryBuffer:
+        return (
+            memory or ChatMemoryBuffer(token_limit=DEFAULT_TOKEN_LIMIT).from_defaults(llm=self.llm)
+        )
