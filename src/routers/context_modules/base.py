@@ -11,6 +11,7 @@ from src.routers.context_modules.pydantics import ContextInfo, ExtractedFacts
 
 
 ContextType = Type[Context]
+ContextModuleType = Type["ContextModuleBase"]
 
 
 class ContextModuleBase(ABC):
@@ -36,6 +37,9 @@ class ContextModuleBase(ABC):
     @abstractmethod
     def _load_context(self, chat_id: UUID):
         pass
+
+    def get_name(self) -> str:
+        return self.name
 
     def add_context(self, context: ContextType):
         if not isinstance(context, ContextType):

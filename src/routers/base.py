@@ -31,6 +31,7 @@ from src.routers.prompts import (
 from src.routers.skills import SkillMap, SkillOutput
 from src.routers.constants import DEFAULT_TOKEN_LIMIT
 from src.routers.condensers import CondenseModuleType
+from src.routers.context_modules import ContextModuleType
 from src.invocations import structured_invocation, non_structured_invocation
 
 
@@ -48,6 +49,7 @@ class RouterAgent(Workflow):
         llm: LLM,
         skill_map: SkillMap,
         condense_module: CondenseModuleType,
+        context_modules: list[ContextModuleType] = [],
         chat_history: Optional[ChatMemoryBuffer] = None,
         timeout: int = 300,
         system_prompt: str = SYSTEM_PROMPT,
@@ -64,6 +66,9 @@ class RouterAgent(Workflow):
         self.system_prompt: str = self._prepare_system_prompt(system_prompt)
         self.memory: ChatMemoryBuffer = self._prepare_chat_memory(chat_history)
         self.internal_memory: ChatMemoryBuffer = self._prepare_internal_memory()
+        self.context_modules: dict[str, CondenseModuleType] = (
+            self._prepare_context_modules(context_modules)
+        )
 
     @step
     async def prepare_agent(self, ev: StartEvent) -> RouterInputEvent:
@@ -245,3 +250,8 @@ class RouterAgent(Workflow):
     def _gather_thoughts(self) -> str:
         thoughts = self.internal_memory.get_all()
         return "\n".join([str(msg) for msg in thoughts])
+
+    def _prepare_context_modules(
+        self, context_modules: list[CondenseModuleType]
+    ) -> dict[str, CondenseModuleType]:
+        return {module.get_name(): module for module in context_modules}
