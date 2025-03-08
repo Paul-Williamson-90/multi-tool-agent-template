@@ -53,12 +53,12 @@ ROUTER_AGENT_PROMPT_TEMPLATE = PromptTemplate(
         """# SYSTEM:\n
         <system>{system}\n
         {instructions}</system>\n\n
-        
+
         # TOOLS AVAILABLE:\n
         <tools>{tools}</tools>\n\n
-        
+
         {chat_history}\n\n
-        
+
         # ASSISTANT'S THOUGHTS AND TOOL CALLS:\n
         {thoughts}"""
     )

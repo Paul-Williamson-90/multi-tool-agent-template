@@ -35,7 +35,7 @@ class PlanningStep(BaseModel):
     information to response to the user or whether you need to call a tool to gather more information.
     - If you need to call a tool, you should outline the reasons why and how you would use the tool in your thought process.
     - If you have all the information you need to response to the user, you should plan your response in your thought process.
-    
+
     Attributes:
         - steps: list[Step] - Your step-by-step thought process for planning your response or tool calls.
         - next_action: Literal["tool_call", "response"] - The next action you need to take. If you need to call a tool, set this to \

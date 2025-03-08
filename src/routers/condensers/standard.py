@@ -20,7 +20,7 @@ USER_INTENT_CONDENSE = PromptTemplate(
         **Your re-write of the user's message must not be embelished**\n
         **If there is no prior message that contains relevant information to the user's current query, \
         simply repeat the user's last message word for word.**</system>\n\n
-        
+
         # CHAT HISTORY:\n
         <chat history>{chat_history}</chat history>\n\n
 
@@ -41,13 +41,13 @@ CHAT_HISTORY_CONDENSE = PromptTemplate(
         You must use concise bullet points for each piece of information to ensure the chat history is easy to read and understand. \
         If the current messages to be condensed are irrelevant to the user's last message, \
         simply output these words 'NO RELEVANT INFORMATION'.\n\n
-        
+
         # CONDENSED CHAT HISTORY SO FAR...\n
         <condensed>{condensed}</condensed>\n\n
 
         # USER'S LAST MESSAGE FOR CHECKING RELEVANCE AGAINST\n
         <user last message>{user_last_message}</user last message>\n\n
-        
+
         # CURRENT MESSAGES TO BE CONDENSED\n
         <current message>{current_message}</current message>
         """
