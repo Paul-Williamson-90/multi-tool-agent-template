@@ -28,7 +28,7 @@ from src.routers.prompts import (
     RESPONSE_INSTRUCTIONS,
     TOOL_DECISION_INSTRUCTIONS,
 )
-from src.routers.skills.base import SkillMap
+from src.routers.skills import SkillMap, SkillOutput
 from src.routers.constants import DEFAULT_TOKEN_LIMIT
 from src.routers.condensers import CondenseModuleType
 from src.invocations import structured_invocation, non_structured_invocation
@@ -187,28 +187,27 @@ class RouterAgent(Workflow):
             )
 
             if inspect.iscoroutinefunction(function_callable):
-                function_result = await function_callable(arguments)
+                function_result: SkillOutput = await function_callable(arguments)
             else:
-                function_result = function_callable(arguments)
+                function_result: SkillOutput = function_callable(arguments)
 
         except KeyError:
             logger.warning(
                 f"[{self.chat_id}]: RouterAgent tool {function_name} not found in skill map."
             )
-            function_result = "Error: Unknown tool name."
+            function_result = SkillOutput(response_to_llm="Error: Unknown tool name.")
 
         except Exception as e:
             logger.error(
                 f"[{self.chat_id}]: RouterAgent encountered an error calling tool {function_name}: {e}"
             )
-            function_result = (
-                f"**{function_name} tool call failed.**\n"
-                f"Error: {e}"
+            function_result = SkillOutput(
+                response_to_llm=f"**{function_name} tool call failed.**\nError: {e}"
             )
 
         message = ChatMessage(
             role=MessageRole.TOOL,
-            content=function_result,
+            content=str(function_result),
             additional_kwargs={"tool_call_id": tool_call.tool_id},
         )
 
