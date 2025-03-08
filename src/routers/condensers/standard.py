@@ -12,20 +12,23 @@ from src.invocations import non_structured_invocation
 USER_INTENT_CONDENSE = PromptTemplate(
     dedent(
         """# SYSTEM:\n
-        <system>The user has sent you a message and your task is now to use the last few messages in the chat to summarise the user's intent / what they are asking of you. \
-        THe last message is the response from the user.
-        
-        You should re-write the user's last message from the perspective of the user but making sure that any \
-        relevant information from prior messages they are referring to is included. For example when the user refers to information in a \
-        prior message but does not directly state it in their following message (presupposition).\n\n
-        
-        If there is no prior message that contains relevant information to the user's current query, simply repeat the user's last message.</system>\n\n
+        <system>The user has sent you a message and your task is to re-write the user's message \
+        in a way that includes relevant information from prior messages that the user is referring to. \
+        For example, when the user refers to information (such as facts, entities, or prior conversations) in a \
+        prior message but does not directly state it in their last message (presupposition).\n\n
+
+        **Your response should be in first-person from the perspective of the user.**\n
+        **Your re-write of the user's message must not be embelished**\n
+        **If there is no prior message that contains relevant information to the user's current query, \
+        simply repeat the user's last message word for word.**</system>\n\n
         
         # CHAT HISTORY:\n
         <chat history>{chat_history}</chat history>\n\n
 
         # USER'S LAST MESSAGE:\n
         <user>{user_last_message}</user>
+
+        Re-write the user's message now, you do not need to include any other information or preamble.
         """
     )
 )
@@ -70,7 +73,7 @@ class StandardCondenser(CondenseModuleBase):
     def __init__(
             self,
             llm: LLM,
-            n_msg_trigger: Optional[int] = None,
+            n_msg_trigger: Optional[int] = 5,
             n_tokens_trigger: Optional[int] = None,
             n_msgs_user_intent: int = 6,
             condense_batch_size: int = 2,
