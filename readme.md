@@ -1,6 +1,8 @@
 # Project Template for Multi-Tool LLM Agents with Llama-Index
 A multi-tool agent template with Llama-Index using the Workflow event-driven architecture. This template has been extended with some custom functionality designed for various use-cases I've had to design for.
 
+**NOTE: This repo was recently updated with some new functionality and is yet to be fully implemented / tested.**
+
 # Tenplate Explained
 ## RouterAgent (src.routers.base.RouterAgent)
 This class is the router LLM that will receive a text input, and return a response. It has tools available to it via 'Skills' which are defined by the programmer and passed via the SkillMap class. Additionally, the router agent can be fitted with a condense_module for condensing the chat history (improved context window management) and ensuring the user's message has relevant context from prior messages. Finally, context_modules can be added for managing large retrieved context.
