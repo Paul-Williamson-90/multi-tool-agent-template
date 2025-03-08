@@ -31,7 +31,7 @@ from src.routers.prompts import (
 from src.routers.skills import SkillMap, SkillOutput
 from src.routers.constants import DEFAULT_TOKEN_LIMIT
 from src.routers.condensers import CondenseModuleType
-from src.routers.context_modules import ContextModuleType
+from src.routers.context_modules import ContextModuleType, ContextType
 from src.invocations import structured_invocation, non_structured_invocation
 
 
