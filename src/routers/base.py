@@ -67,6 +67,11 @@ class RouterAgent(Workflow):
     @step
     async def prepare_agent(self, ev: StartEvent) -> RouterInputEvent:
         logger.info(f"[{self.chat_id}]: Preparing RouterAgent")
+        
+        self._round = 0
+        self.condense_module.reset()
+        self.internal_memory.reset()
+
         user_input = ev.input
         user_msg = ChatMessage(role=MessageRole.USER, content=user_input)
         self.memory.put(user_msg)
