@@ -1,3 +1,4 @@
+import uuid
 from typing import Union, Any, Optional
 import inspect
 import logging
@@ -6,7 +7,7 @@ from json import JSONDecodeError
 from datetime import datetime
 
 from pydantic import BaseModel
-from tenacity import retry, stop_after_attempt, wait_fixed
+from tenacity import retry, stop_after_attempt, wait_fixed, before_log
 from llama_index.core.llms import ChatMessage
 from llama_index.core.memory import ChatMemoryBuffer
 from llama_index.core.tools import ToolSelection
@@ -50,51 +51,61 @@ class RouterAgent(Workflow):
     _condense_kwargs: dict[str, Any] = {"max_tokens": 1000}
     _rounds_limit: int = 5
     _n_msgs_user_intent: int = 4
+    _condensed: str | None = None
+    _user_intent: str | None = None
+    _round: int = 1
 
     def __init__(
         self,
         llm: LLM,
         skill_map: SkillMap,
-        memory: Optional[ChatMemoryBuffer] = None,
+        chat_history: Optional[ChatMemoryBuffer] = None,
         timeout: int = 300,
         system_prompt: str = SYSTEM_PROMPT,
+        chat_id: Optional[uuid.UUID] = None,
     ):
-        logger.info("Initializing RouterAgent")
+        self.chat_id = chat_id or uuid.uuid4()
+        logger.info(f"[{self.chat_id}]: Initializing RouterAgent")
+        
         super().__init__(timeout=timeout)
+        
         self.llm: LLM = llm
         self.skill_map: SkillMap = skill_map
-        self.system_prompt: str = system_prompt.format(
-            date=datetime.now().strftime("%Y-%m-%d")
-        )
-        self.memory: ChatMemoryBuffer = memory or ChatMemoryBuffer(
-            token_limit=40000
-        ).from_defaults(llm=llm)
-        self._internal_memory: ChatMemoryBuffer = ChatMemoryBuffer(
-            token_limit=40000
-        ).from_defaults(llm=llm)
-        self._internal_memory.put_messages(self.memory.get_all())
+        self.system_prompt: str = self._prepare_system_prompt(system_prompt)
+        self.memory: ChatMemoryBuffer = self._prepare_chat_memory(chat_history)
+        self.internal_memory: ChatMemoryBuffer = self._prepare_internal_memory()
 
-        self.tools: list[str] = []
-        for func in self.skill_map.get_function_list():
-            self.tools.append(self.skill_map.get_function_dict_by_name(func))
-        self._condensed: str | None = None
-        self._user_intent: str | None = None
-        self._round: int = 1
+    def _prepare_system_prompt(self, system_prompt: str) -> str:
+        if "{date}" in system_prompt:
+            system_prompt = system_prompt.format(
+                date=datetime.now().strftime("%Y-%m-%d")
+            )
+        return system_prompt
+
+    def _prepare_internal_memory(self) -> ChatMemoryBuffer:
+        internal_memory: ChatMemoryBuffer = self._prepare_chat_memory()
+        internal_memory.put_messages(self.memory.get_all())
+        return internal_memory
+
+    def _prepare_chat_memory(self, memory: Optional[ChatMemoryBuffer] = None) -> ChatMemoryBuffer:
+        return (
+            memory or ChatMemoryBuffer(token_limit=40000).from_defaults(llm=self.llm)
+        )
 
     @step
     async def prepare_agent(self, ev: StartEvent) -> RouterInputEvent:
-        logger.info("Preparing RouterAgent")
+        logger.info(f"[{self.chat_id}]: Preparing RouterAgent")
         user_input = ev.input
         user_msg = ChatMessage(role=MessageRole.USER, content=user_input)
         self.memory.put(user_msg)
-        self._internal_memory.put(user_msg)
+        self.internal_memory.put(user_msg)
 
         input = self.memory.get_all()
         return RouterInputEvent(input=input)
 
     @step
     async def router(self, ev: RouterInputEvent) -> Union[ToolCallEvent, StopEvent]:
-        logger.info("RouterAgent router")
+        logger.info(f"[{self.chat_id}]: RouterAgent router")
         messages: list[ChatMessage] = ev.input
 
         if self._round > self._rounds_limit:
@@ -109,7 +120,7 @@ class RouterAgent(Workflow):
             )
 
         except Exception as e:
-            logger.error("RouterAgent encountered an error: %s", e)
+            logger.error(f"[{self.chat_id}]: RouterAgent encountered an error: %s", e)
             return RouterEscapeEvent(hint=ERROR_HINT)
 
         next_action = response.next_action
@@ -121,6 +132,7 @@ class RouterAgent(Workflow):
         
     @step
     async def response(self, ev: RouterResponseEvent) -> StopEvent:
+        logger.info(f"[{self.chat_id}]: RouterAgent response")
         messages = ev.messages
         response = ev.response
 
@@ -141,6 +153,7 @@ class RouterAgent(Workflow):
         
     @step
     async def tool_selection(self, ev: RouterToolSelectionEvent) -> ToolCallEvent:
+        logger.info(f"[{self.chat_id}]: RouterAgent tool selection")
         messages = ev.messages
         response = ev.response
 
@@ -152,13 +165,13 @@ class RouterAgent(Workflow):
             thoughts=str(response),
         )
         output_tool = tool_response.output
-        logger.info("RouterAgent tool calls: %s", output_tool)
+        logger.info(f"[{self.chat_id}]: RouterAgent tool calls: %s", output_tool)
 
-        self._internal_memory.put(
+        self.internal_memory.put(
             ChatMessage(content=str(response), role=MessageRole.ASSISTANT)
         )
 
-        self._internal_memory.put(
+        self.internal_memory.put(
             ChatMessage(content=str(tool_response), role=MessageRole.ASSISTANT)
         )
 
@@ -167,7 +180,7 @@ class RouterAgent(Workflow):
 
     @step
     async def tool_call_handler(self, ev: ToolCallEvent) -> RouterInputEvent:
-        logger.info("RouterAgent tool call handler")
+        logger.info(f"[{self.chat_id}]: RouterAgent tool call handler")
         self._round += 1
 
         tool_calls: list[ToolSelection] = ev.tool_calls
@@ -177,7 +190,7 @@ class RouterAgent(Workflow):
             arguments = tool_call.tool_kwargs
 
             logger.info(
-                f"RouterAgent calling tool {function_name} using arguments {arguments}"
+                f"[{self.chat_id}]: RouterAgent calling tool {function_name} using arguments {arguments}"
             )
 
             try:
@@ -192,7 +205,7 @@ class RouterAgent(Workflow):
 
             except KeyError:
                 logger.warning(
-                    f"RouterAgent tool {function_name} not found in skill map."
+                    f"[{self.chat_id}]: RouterAgent tool {function_name} not found in skill map."
                 )
                 function_result = "Error: Unknown tool name."
 
@@ -202,17 +215,17 @@ class RouterAgent(Workflow):
                 additional_kwargs={"tool_call_id": tool_call.tool_id},
             )
 
-            self._internal_memory.put(message)
+            self.internal_memory.put(message)
 
-        return RouterInputEvent(input=self._internal_memory.get_all())
+        return RouterInputEvent(input=self.internal_memory.get_all())
 
     @step
     async def escape_route(self, ev: RouterEscapeEvent) -> StopEvent:
-        logger.info("RouterAgent has reached the escape route.")
+        logger.info(f"[{self.chat_id}]: RouterAgent has reached the escape route.")
 
         hint = ev.hint
 
-        internal_msgs = self._internal_memory.get_all()
+        internal_msgs = self.internal_memory.get_all()
         user_last_msg = self._get_users_last_message()
         output = self._non_structured_invocation(
             ESCAPE_PROMPT,
@@ -227,7 +240,7 @@ class RouterAgent(Workflow):
         self.memory.put(ChatMessage(content=str(output), role=MessageRole.ASSISTANT))
         return StopEvent(result=output)
 
-    @retry(stop=stop_after_attempt(5), wait=wait_fixed(1))
+    @retry(stop=stop_after_attempt(5), wait=wait_fixed(1), before=before_log(logger, logging.INFO))
     def _structured_invocation(
         self,
         messages: list[ChatMessage],
@@ -237,13 +250,12 @@ class RouterAgent(Workflow):
         thoughts: str = "",
     ) -> BaseModel:
         chat_history = self._chat_history_from_messages(messages)
-        tool_metadata = self._tool_metadata_str()
 
         response = self.llm.complete(
             prompt=ROUTER_AGENT_PROMPT_TEMPLATE.format(
                 chat_history=chat_history,
                 system=self.system_prompt,
-                tools=tool_metadata,
+                tools=self.skill_map.tool_metadata_str,
                 thoughts=thoughts,
                 instructions=instruction,
                 schema=json.dumps(pydantic_object.model_json_schema()),
@@ -270,7 +282,7 @@ class RouterAgent(Workflow):
         response_object = pydantic_object(**response_json)
         return response_object
 
-    @retry(stop=stop_after_attempt(5), wait=wait_fixed(1))
+    @retry(stop=stop_after_attempt(5), wait=wait_fixed(1), before=before_log(logger, logging.INFO))
     def _non_structured_invocation(
         self,
         template: PromptTemplate,
@@ -305,7 +317,7 @@ class RouterAgent(Workflow):
         logger.info("Condensing chat history")
         user_last_message = self._user_intent or self._get_user_intent()
         msgs_to_condense = self.memory.get_all()
-        internal_msgs = self._internal_memory.get_all()[len(msgs_to_condense) :]
+        internal_msgs = self.internal_memory.get_all()[len(msgs_to_condense) :]
         condensed = ""
         for batch in range(0, len(msgs_to_condense), self._condence_batch_size):
             batch_str = "\n".join(
@@ -344,6 +356,3 @@ class RouterAgent(Workflow):
 
     def _get_users_last_message(self) -> str:
         return str(self.memory.get_all()[-1])
-
-    def _tool_metadata_str(self) -> str:
-        return "\n\n".join(str(tool) for tool in self.tools)

@@ -219,3 +219,10 @@ class SkillMap:
         return str(
             self.skill_map[skill_name]["function_dict"]["function"]
         )
+
+    @property
+    def tool_metadata_str(self) -> str:
+        tools_meta_list: list[str] = []
+        for func in self.get_function_list():
+            tools_meta_list.append(self.get_function_dict_by_name(func))
+        return "\n\n".join(str(tool) for tool in tools_meta_list)
