@@ -1,18 +1,18 @@
-from abc import ABC, abstractmethod
-from typing import Any, Optional
-import uuid
 import logging
+import uuid
+from abc import ABC, abstractmethod
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Any, Optional
 
 import numpy as np
-from pydantic import BaseModel
-from tenacity import retry, stop_after_attempt, wait_fixed, before_log
 from llama_index.core.llms.llm import LLM
+from pydantic import BaseModel
+from tenacity import before_log, retry, stop_after_attempt, wait_fixed
 
-from src.routers.context_modules.prompts import EXTRACT_TEMPLATE, SUMMARISE_TEMPLATE
-from src.routers.context_modules.pydantics import ExtractedFacts, ContextInfo
-from src.invocations import structured_invocation, non_structured_invocation
-
+from src.invocations import non_structured_invocation, structured_invocation
+from src.routers.context_modules.prompts import (EXTRACT_TEMPLATE,
+                                                 SUMMARISE_TEMPLATE)
+from src.routers.context_modules.pydantics import ContextInfo, ExtractedFacts
 
 logger = logging.getLogger(__name__)
 

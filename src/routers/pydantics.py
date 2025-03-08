@@ -1,9 +1,9 @@
 from enum import Enum
 
-from pydantic import BaseModel
-from llama_index.core.tools import ToolSelection
-from llama_index.core.llms import ChatMessage
 from llama_index.core.base.llms.types import MessageRole
+from llama_index.core.llms import ChatMessage
+from llama_index.core.tools import ToolSelection
+from pydantic import BaseModel
 
 
 class Step(BaseModel):

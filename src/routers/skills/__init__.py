@@ -1,4 +1,3 @@
-from src.routers.skills.base import SkillOutput, SkillMap
-
+from src.routers.skills.base import SkillMap, SkillOutput
 
 __all__ = ["SkillOutput", "SkillMap"]

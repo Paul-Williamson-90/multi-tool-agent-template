@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
-from typing import Optional
 from enum import Enum
+from typing import Optional
 
-from pydantic import BaseModel
 from llama_index.core.memory import ChatMemoryBuffer
+from pydantic import BaseModel
 
 
 class TriggerMode(Enum):

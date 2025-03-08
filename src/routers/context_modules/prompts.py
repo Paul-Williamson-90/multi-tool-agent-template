@@ -1,6 +1,5 @@
 from llama_index.core import PromptTemplate
 
-
 EXTRACT_TEMPLATE = PromptTemplate(
     """# SYSTEM:
 <system>Given a brief from the user and some retrieved contexts, you must examine the brief and extract the facts from the contexts \

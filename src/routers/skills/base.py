@@ -1,10 +1,10 @@
-from abc import ABC, abstractmethod
-import uuid
-import typing
-from typing import Any, Callable, Union, Optional
 import inspect
+import typing
+import uuid
+from abc import ABC, abstractmethod
+from typing import Any, Callable, Optional, Union
 
-from pydantic import BaseModel, model_validator, field_validator, TypeAdapter
+from pydantic import BaseModel, TypeAdapter, field_validator, model_validator
 
 from src.routers.skills.errors import SkillArgException
 

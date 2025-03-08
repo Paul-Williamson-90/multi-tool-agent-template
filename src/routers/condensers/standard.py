@@ -1,13 +1,12 @@
-from typing import Any, Optional
 from textwrap import dedent
+from typing import Any, Optional
 
 from llama_index.core import PromptTemplate
 from llama_index.core.llms.llm import LLM
 from llama_index.core.memory import ChatMemoryBuffer
 
-from src.routers.condensers.base import CondenseModuleBase
 from src.invocations import non_structured_invocation
-
+from src.routers.condensers.base import CondenseModuleBase
 
 USER_INTENT_CONDENSE = PromptTemplate(
     dedent(

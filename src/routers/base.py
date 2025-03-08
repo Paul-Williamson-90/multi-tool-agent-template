@@ -1,48 +1,32 @@
-import uuid
-from typing import Union, Any, Optional
 import inspect
 import logging
+import uuid
 from datetime import datetime
+from typing import Any, Optional, Union
 
-from tenacity import retry, stop_after_attempt, wait_fixed, before_log
+from llama_index.core.base.llms.types import MessageRole
 from llama_index.core.llms import ChatMessage
+from llama_index.core.llms.llm import LLM
 from llama_index.core.memory import ChatMemoryBuffer
 from llama_index.core.workflow import StartEvent, StopEvent, Workflow, step
-from llama_index.core.llms.llm import LLM
-from llama_index.core.base.llms.types import MessageRole
+from tenacity import before_log, retry, stop_after_attempt, wait_fixed
 
-from src.routers.events import (
-    RouterInputEvent,
-    ToolCallEvent,
-    RouterResponseEvent,
-    RouterToolSelectionEvent,
-    RouterEscapeEvent,
-    RouterContextSelectionEvent,
-)
-from src.routers.pydantics import (
-    PlanningStep,
-    ToolCallResponse,
-    NextAction,
-    ContextSelection,
-    SelectedContext,
-)
-from src.routers.prompts import (
-    SYSTEM_PROMPT,
-    ROUTER_AGENT_PROMPT_TEMPLATE,
-    ESCAPE_PROMPT,
-    ROUNDS_EXCEEDED_HINT,
-    ACTION_DECISION_INSTRUCTIONS,
-    ERROR_HINT,
-    RESPONSE_INSTRUCTIONS,
-    TOOL_DECISION_INSTRUCTIONS,
-    CONTEXT_SELECTION_INSTRUCTIONS,
-)
-from src.routers.skills import SkillMap, SkillOutput
-from src.routers.constants import DEFAULT_TOKEN_LIMIT
+from src.invocations import non_structured_invocation, structured_invocation
 from src.routers.condensers import CondenseModuleBase
+from src.routers.constants import DEFAULT_TOKEN_LIMIT
 from src.routers.context_modules import ContextModuleBase
-from src.invocations import structured_invocation, non_structured_invocation
-
+from src.routers.events import (RouterContextSelectionEvent, RouterEscapeEvent,
+                                RouterInputEvent, RouterResponseEvent,
+                                RouterToolSelectionEvent, ToolCallEvent)
+from src.routers.prompts import (ACTION_DECISION_INSTRUCTIONS,
+                                 CONTEXT_SELECTION_INSTRUCTIONS, ERROR_HINT,
+                                 ESCAPE_PROMPT, RESPONSE_INSTRUCTIONS,
+                                 ROUNDS_EXCEEDED_HINT,
+                                 ROUTER_AGENT_PROMPT_TEMPLATE, SYSTEM_PROMPT,
+                                 TOOL_DECISION_INSTRUCTIONS)
+from src.routers.pydantics import (ContextSelection, NextAction, PlanningStep,
+                                   SelectedContext, ToolCallResponse)
+from src.routers.skills import SkillMap, SkillOutput
 
 logger = logging.getLogger(__name__)
 
