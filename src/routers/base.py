@@ -28,7 +28,7 @@ from src.routers.prompts import (
     RESPONSE_INSTRUCTIONS,
     TOOL_DECISION_INSTRUCTIONS,
 )
-from src.skills.base import SkillMap
+from src.routers.skills.base import SkillMap
 from src.routers.constants import DEFAULT_TOKEN_LIMIT
 from src.routers.condensers import CondenseModuleType
 from src.invocations import structured_invocation, non_structured_invocation
