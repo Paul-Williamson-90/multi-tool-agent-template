@@ -1,10 +1,18 @@
+from abc import ABC, abstractmethod
 import typing
 from typing import Any, Callable, Union, Optional
 import inspect
+
 from pydantic import BaseModel, model_validator, field_validator, TypeAdapter
-from abc import ABC, abstractmethod
 
 from src.routers.skills.errors import SkillArgException
+
+
+class SkillOutput(BaseModel):
+    response_to_llm: str
+
+    def __str__(self) -> str:
+        return self.response_to_llm
 
 
 class SkillArgAttr(BaseModel):
@@ -95,6 +103,7 @@ class FunctionCallSkill(ABC):
         name: str,
         description: str,
         function_args: Optional[list[SkillArgAttr]] = [],
+        visible_to_human: bool = False,
     ):
         """
         Instantiates a FunctionCallSkill object.
@@ -104,12 +113,14 @@ class FunctionCallSkill(ABC):
         - name: str - name of the function
         - description: str - description of the function
         - function_args: Optional[list[SkillArgAttr]] - list of SkillArgAttr objects that define the arguments of the function
+        - visible_to_human: bool - whether the function is visible to the human or not
         """
         self.name = name
         self.description = description
         self.function_args = function_args
         self.function_callable = self.handle_router_input
         self.function_dict = self._prepare_function_dict()
+        self.visible_to_human = visible_to_human
 
     def _prepare_function_dict(self) -> dict[str, dict[str, Union[str, dict]]]:
         return {
@@ -148,7 +159,7 @@ class FunctionCallSkill(ABC):
     def get_function_callable(self) -> Callable:
         return self.function_callable
 
-    def handle_router_input(self, input: dict[str, Any]) -> str:
+    def handle_router_input(self, input: dict[str, Any]) -> SkillOutput:
         """
         This method is used to handle the input from the LLM router agent.
         It will call the execute method and return the result.
@@ -157,7 +168,7 @@ class FunctionCallSkill(ABC):
         - args: dict[str, Any] - input from the LLM router agent
 
         Returns:
-        - str - result of the execute method
+        - SkillOutput - result of the execute method
         """
         if len(self.function_args) == 0:
             return self.execute()
@@ -179,7 +190,7 @@ class FunctionCallSkill(ABC):
         return self.execute(**parsed_args)
 
     @abstractmethod
-    def execute(self) -> str:
+    def execute(self) -> SkillOutput:
         """
         Abstract method that should be implemented by the child class.
         This method should contain the logic of the function that the skill is supposed to execute.
@@ -200,6 +211,7 @@ class SkillMap:
             self.skill_map[skill.get_function_name()] = {
                 "function_dict": skill.get_function_dict(),
                 "function_callable": skill.get_function_callable(),
+                "visible_to_human": skill.visible_to_human,
             }
         
     def get_function_callable_by_name(self, skill_name: str) -> Callable:
@@ -223,8 +235,9 @@ class SkillMap:
         )
 
     @property
-    def tool_metadata_str(self) -> str:
+    def info(self) -> str:
         tools_meta_list: list[str] = []
         for func in self.get_function_list():
-            tools_meta_list.append(self.get_function_dict_by_name(func))
+            if self.skill_map[func]["visible_to_human"]:
+                tools_meta_list.append(self.get_function_dict_by_name(func))
         return "\n\n".join(str(tool) for tool in tools_meta_list)

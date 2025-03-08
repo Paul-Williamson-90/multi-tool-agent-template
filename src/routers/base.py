@@ -92,7 +92,7 @@ class RouterAgent(Workflow):
             context = ROUTER_AGENT_PROMPT_TEMPLATE.format(
                 chat_history=str(condensed),
                 system=self.system_prompt,
-                tools=self.skill_map.tool_metadata_str,
+                tools=self.skill_map.info,
                 thoughts=thoughts,
                 instructions=ACTION_DECISION_INSTRUCTIONS,
             )
@@ -150,7 +150,7 @@ class RouterAgent(Workflow):
         context = ROUTER_AGENT_PROMPT_TEMPLATE.format(
             chat_history=str(condensed),
             system=self.system_prompt,
-            tools=self.skill_map.tool_metadata_str,
+            tools=self.skill_map.info,
             thoughts=thoughts,
             instructions=TOOL_DECISION_INSTRUCTIONS,
         )
