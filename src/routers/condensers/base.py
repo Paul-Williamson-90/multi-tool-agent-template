@@ -1,12 +1,9 @@
 from abc import ABC, abstractmethod
-from typing import Optional, Type
+from typing import Optional
 from enum import Enum
 
 from pydantic import BaseModel
 from llama_index.core.memory import ChatMemoryBuffer
-
-
-CondenseModuleType = Type["CondenseModuleBase"]
 
 
 class TriggerMode(Enum):
@@ -53,8 +50,14 @@ class CondenseModuleBase(ABC):
 
     def _trigger(self, chat_history: ChatMemoryBuffer) -> bool:
         if self.trigger_mode == TriggerMode.MSG:
-            return len(chat_history) >= self.n_msg_trigger
-        return chat_history._token_count_for_messages() >= self.n_tokens_trigger
+            assert isinstance(self.n_msg_trigger, int)
+            return len(chat_history.get_all()) >= self.n_msg_trigger
+        assert isinstance(self.n_tokens_trigger, int)
+        return (
+            chat_history._token_count_for_messages(
+                chat_history.get_all()
+            ) >= self.n_tokens_trigger
+        )
 
     def __call__(self, chat_history: ChatMemoryBuffer) -> CondensedChat:
         if len(chat_history.get_all()) > 1:
@@ -69,7 +72,7 @@ class CondenseModuleBase(ABC):
             )
         return CondensedChat(
             user_intent=user_intent,
-            condensed="\n".join([str(msg) for msg in chat_history[:-1]]),
+            condensed="\n".join([str(msg) for msg in chat_history.get_all()[:-1]]),
         )
 
     def reset_condensed(self):

@@ -124,7 +124,7 @@ class StandardCondenser(CondenseModuleBase):
         condensed = ""
         for batch in range(0, len(messages), self._condense_batch_size):
             response = self._extract_relevant(
-                messages[batch : batch + self._condense_batch_size],
+                [str(m) for m in messages[batch : batch + self._condense_batch_size]],
                 condensed,
                 user_intent,
             )

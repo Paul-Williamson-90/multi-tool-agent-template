@@ -104,7 +104,7 @@ class FunctionCallSkill(ABC):
         self,
         name: str,
         description: str,
-        function_args: Optional[list[SkillArgAttr]] = [],
+        function_args: list[SkillArgAttr] = [],
         visible_to_human: bool = False,
     ):
         """
@@ -114,7 +114,7 @@ class FunctionCallSkill(ABC):
         Args:
         - name: str - name of the function
         - description: str - description of the function
-        - function_args: Optional[list[SkillArgAttr]] - list of SkillArgAttr objects that define the arguments of the function
+        - function_args: list[SkillArgAttr] - list of SkillArgAttr objects that define the arguments of the function
         - visible_to_human: bool - whether the function is visible to the human or not
         """
         self.name = name

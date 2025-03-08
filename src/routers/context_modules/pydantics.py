@@ -48,7 +48,7 @@ class ContextInfo(BaseModel):
 
     Attributes:
     -----------
-    context_id: UUID
+    context_id: str
         The unique identifier of the context.
     source: str
         The source of the context.
@@ -58,7 +58,7 @@ class ContextInfo(BaseModel):
         Context of what the collection contains.
     """
 
-    context_id: UUID
+    context_id: str
     source: str
     num_records: int
     context: str

@@ -1,6 +1,6 @@
 import logging
 import json
-from typing import Any, Type
+from typing import Any
 
 from ast import literal_eval
 from pydantic import BaseModel
@@ -11,9 +11,6 @@ from llama_index.core.base.llms.types import CompletionResponse
 
 
 logger = logging.getLogger(__name__)
-
-
-PydanticType = Type[BaseModel]
 
 
 DEFAULT_STRUCTURED_PROMPT_TEMPLATE = PromptTemplate(
@@ -35,7 +32,7 @@ def structured_invocation(
     pydantic_object: type[BaseModel],
     prompt_template: PromptTemplate = DEFAULT_STRUCTURED_PROMPT_TEMPLATE,
     llm_kwargs: dict[str, Any] = {},
-) -> PydanticType:
+) -> BaseModel:
     response = llm.complete(
         prompt=prompt_template.format(
             context=context,

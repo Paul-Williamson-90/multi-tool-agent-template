@@ -39,8 +39,8 @@ from src.routers.prompts import (
 )
 from src.routers.skills import SkillMap, SkillOutput
 from src.routers.constants import DEFAULT_TOKEN_LIMIT
-from src.routers.condensers import CondenseModuleType
-from src.routers.context_modules import ContextModuleType
+from src.routers.condensers import CondenseModuleBase
+from src.routers.context_modules import ContextModuleBase
 from src.invocations import structured_invocation, non_structured_invocation
 
 
@@ -54,8 +54,8 @@ class RouterAgent(Workflow):
         self,
         llm: LLM,
         skill_map: SkillMap,
-        condense_module: CondenseModuleType,
-        context_modules: list[ContextModuleType] = [],
+        condense_module: CondenseModuleBase,
+        context_modules: list[ContextModuleBase] = [],
         chat_history: Optional[ChatMemoryBuffer] = None,
         timeout: int = 300,
         system_prompt: str = SYSTEM_PROMPT,
@@ -71,11 +71,11 @@ class RouterAgent(Workflow):
 
         self.llm: LLM = llm
         self.skill_map: SkillMap = skill_map
-        self.condense_module: CondenseModuleType = condense_module
+        self.condense_module: CondenseModuleBase = condense_module
         self.system_prompt: str = self._prepare_system_prompt(system_prompt)
         self.memory: ChatMemoryBuffer = self._prepare_chat_memory(chat_history)
         self.internal_memory: ChatMemoryBuffer = self._prepare_internal_memory()
-        self.context_modules: dict[str, CondenseModuleType] = (
+        self.context_modules: dict[str, ContextModuleBase] = (
             self._prepare_context_modules(context_modules)
         )
         self._generation_kwargs: dict[str, Any] = generation_kwargs
@@ -111,7 +111,7 @@ class RouterAgent(Workflow):
             context = self._structured_response_template(
                 instructions=ACTION_DECISION_INSTRUCTIONS
             )
-            response: PlanningStep = structured_invocation(
+            response: PlanningStep = structured_invocation(  # type: ignore
                 llm=self.llm,
                 context=context,
                 pydantic_object=PlanningStep,
@@ -138,7 +138,7 @@ class RouterAgent(Workflow):
 
         if len(self.context_modules) == 0:
             return RouterResponseEvent()
-        if sum([len(module)] for module in self.context_modules.values()) == 0:
+        if sum([len(module) for module in self.context_modules.values()]) == 0:
             return RouterResponseEvent()
 
         return self._context_selection()
@@ -171,7 +171,7 @@ class RouterAgent(Workflow):
             instructions=TOOL_DECISION_INSTRUCTIONS
         )
 
-        response: ToolCallResponse = structured_invocation(
+        response: ToolCallResponse = structured_invocation(  # type: ignore
             llm=self.llm,
             context=context,
             pydantic_object=ToolCallResponse,
@@ -205,7 +205,7 @@ class RouterAgent(Workflow):
             if inspect.iscoroutinefunction(function_callable):
                 function_result: SkillOutput = await function_callable(arguments)
             else:
-                function_result: SkillOutput = function_callable(arguments)
+                function_result = function_callable(arguments)
 
         except KeyError:
             logger.warning(
@@ -266,9 +266,9 @@ class RouterAgent(Workflow):
         return "\n".join([str(msg) for msg in thoughts])
 
     def _prepare_context_modules(
-        self, context_modules: list[CondenseModuleType]
-    ) -> dict[str, CondenseModuleType]:
-        module_dict: dict[str, CondenseModuleType] = {}
+        self, context_modules: list[ContextModuleBase]
+    ) -> dict[str, ContextModuleBase]:
+        module_dict: dict[str, ContextModuleBase] = {}
         for module in context_modules:
             if module.get_name() in module_dict:
                 raise ValueError(
@@ -300,7 +300,7 @@ class RouterAgent(Workflow):
         context = self._structured_response_template(
             instructions=CONTEXT_SELECTION_INSTRUCTIONS
         )
-        response: ContextSelection = structured_invocation(
+        response: ContextSelection = structured_invocation(  # type: ignore
             llm=self.llm,
             context=context,
             pydantic_object=ContextSelection,
@@ -324,7 +324,7 @@ class RouterAgent(Workflow):
                 extracted_facts.append(
                     SelectedContext(
                         question=question,
-                        facts=facts,
+                        facts=str(facts),
                         memory_object=request.memory_object,
                         context_id=request.context_id,
                     )

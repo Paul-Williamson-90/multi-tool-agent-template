@@ -148,7 +148,7 @@ class Context(ABC):
         assert isinstance(self.content, list)
 
         def worker(page) -> tuple[int, ExtractedFacts]:
-            return page, structured_invocation(
+            output = structured_invocation(
                 llm=llm,
                 context=EXTRACT_TEMPLATE.format(
                     brief=instructions, contexts=self.show_content_by_page(page)
@@ -156,6 +156,8 @@ class Context(ABC):
                 pydantic_object=ExtractedFacts,
                 llm_kwargs=self._llm_extract_kwargs,
             )
+            assert isinstance(output, ExtractedFacts)
+            return page, output
 
         with ThreadPoolExecutor(max_workers=self._max_workers) as executor:
             futures = {

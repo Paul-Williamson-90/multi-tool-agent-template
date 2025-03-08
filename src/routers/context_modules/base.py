@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from uuid import UUID
-from typing import Type, Optional
+from typing import Type
 from textwrap import dedent
 
 import pandas as pd
@@ -12,15 +12,17 @@ from src.routers.skills import SkillOutput
 from src.routers.skills.base import FunctionCallSkill, SkillArgAttr
 
 
-ContextType = Type[Context]
-ContextModuleType = Type["ContextModuleBase"]
-
-
 class VerifyContext(FunctionCallSkill):
     def __init__(
         self,
-        context_module: ContextModuleType,
-        function_args: Optional[list[SkillArgAttr]] = [
+        context_module: "ContextModuleBase",
+    ):
+        name = f"{context_module.get_name()}_verify"
+        description = (
+            f"Verify whether a {context_module.get_name()} stored context contains information "
+            "you need for providing a response back to the user."
+        )
+        function_args: list[SkillArgAttr] = [
             SkillArgAttr(
                 name="context_id",
                 dtype="str",
@@ -33,14 +35,8 @@ class VerifyContext(FunctionCallSkill):
                 description="The query to verify the context with.",
                 required=True,
             ),
-        ],
-        visible_to_human: bool = False,
-    ):
-        name = f"{context_module.get_name()}_verify"
-        description = (
-            f"Verify whether a {context_module.get_name()} stored context contains information "
-            "you need for providing a response back to the user."
-        )
+        ]
+        visible_to_human: bool = False
         super().__init__(
             name=name,
             description=description,
@@ -49,7 +45,7 @@ class VerifyContext(FunctionCallSkill):
         )
         self.context_module = context_module
 
-    def execute(self, context_id: str, query: str) -> SkillOutput:
+    def execute(self, context_id: str, query: str) -> SkillOutput:  # type: ignore
         response = self.context_module.summarise_from_context(context_id, query)
         return SkillOutput(
             response_to_llm=response,
@@ -73,7 +69,7 @@ class ContextModuleBase(ABC):
         self.chat_id = chat_id
         self.llm = llm
         self.name = name
-        self.context: dict[str, ContextType] = {}
+        self.context: dict[str, Context] = {}
         self._load_context(chat_id)
         self.verify_tool = VerifyContext(self)
 
@@ -84,8 +80,8 @@ class ContextModuleBase(ABC):
     def get_name(self) -> str:
         return self.name
 
-    def add_context(self, context: ContextType):
-        if not isinstance(context, ContextType):
+    def add_context(self, context: Context):
+        if not isinstance(context, Context):
             raise TypeError(f"Expected a ContextType object, got {type(context)}")
         self.context[context.context_id] = context
 
@@ -120,9 +116,11 @@ class ContextModuleBase(ABC):
     def check_context_by_id(self, context_id: str) -> bool:
         return context_id in self.context
 
-    def retrieve_context_by_id(self, context_id: str) -> ContextType:
+    def retrieve_context_by_id(self, context_id: str) -> Context:
         self._existance_check(context_id)
-        return self.context.get(context_id)
+        if context_id not in self.context:
+            raise ValueError(f"Context with ID {context_id} not found in {self.name}.")
+        return self.context[context_id]
 
     def _existance_check(self, context_id: str):
         if len(self.context) == 0:
