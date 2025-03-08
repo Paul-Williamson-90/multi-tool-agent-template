@@ -287,6 +287,5 @@ class SkillMap:
     def info(self) -> str:
         tools_meta_list: list[str] = []
         for func in self.get_function_list():
-            if self.skill_map[func]["visible_to_human"]:
-                tools_meta_list.append(self.get_function_dict_by_name(func))
+            tools_meta_list.append(self.get_function_dict_by_name(func))
         return "\n\n".join(str(tool) for tool in tools_meta_list)
