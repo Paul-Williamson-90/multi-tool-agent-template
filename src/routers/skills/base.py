@@ -4,7 +4,7 @@ import inspect
 from pydantic import BaseModel, model_validator, field_validator, TypeAdapter
 from abc import ABC, abstractmethod
 
-from src.skills.errors import SkillArgException
+from src.routers.skills.errors import SkillArgException
 
 
 class SkillArgAttr(BaseModel):
@@ -27,7 +27,9 @@ class SkillArgAttr(BaseModel):
     def dtype_validation(cls, v: str) -> Any:
         try:
             eval_type = eval(
-                v, {"__builtins__": __builtins__}, {"typing": typing, **vars(typing)}
+                v, 
+                {"__builtins__": __builtins__}, 
+                {"typing": typing, **vars(typing)}
             )
             if not any(
                 [
