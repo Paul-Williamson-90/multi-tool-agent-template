@@ -48,7 +48,7 @@ logger = logging.getLogger(__name__)
 
 
 class RouterAgent(Workflow):
-    _round: int = (0,)
+    _round: int = 0
 
     def __init__(
         self,
@@ -60,7 +60,7 @@ class RouterAgent(Workflow):
         timeout: int = 300,
         system_prompt: str = SYSTEM_PROMPT,
         chat_id: Optional[uuid.UUID] = None,
-        generation_kwargs: dict[str, Any] = {"max_tokens": 4000},
+        generation_kwargs: dict[str, Any] = {"max_tokens": 8000},
         tool_selection_kwargs: dict[str, Any] = {"max_tokens": 500},
         rounds_limit: int = 8,
     ):
@@ -300,7 +300,6 @@ class RouterAgent(Workflow):
         context = self._structured_response_template(
             instructions=CONTEXT_SELECTION_INSTRUCTIONS
         )
-
         response: ContextSelection = structured_invocation(
             llm=self.llm,
             context=context,
@@ -311,31 +310,42 @@ class RouterAgent(Workflow):
         if len(response.contexts) == 0:
             return RouterResponseEvent()
 
-        self.internal_memory.put(response.as_msg())
+        try:
+            self.internal_memory.put(response.as_msg())
 
-        extraction_requests = response.contexts
+            extraction_requests = response.contexts
 
-        extracted_facts: list[SelectedContext] = []
-        for request in extraction_requests:
-            question = request.instructions
-            facts = self.context_modules[request.memory_object].extract_from_context(
-                request.context_id, question
-            )
-            extracted_facts.append(
-                SelectedContext(
-                    question=question,
-                    facts=facts,
-                    memory_object=request.memory_object,
-                    context_id=request.context_id,
+            extracted_facts: list[SelectedContext] = []
+            for request in extraction_requests:
+                question = request.instructions
+                facts = self.context_modules[
+                    request.memory_object
+                ].extract_from_context(request.context_id, question)
+                extracted_facts.append(
+                    SelectedContext(
+                        question=question,
+                        facts=facts,
+                        memory_object=request.memory_object,
+                        context_id=request.context_id,
+                    )
+                )
+
+            self.internal_memory.put(
+                ChatMessage(
+                    content="\n\n".join([str(fact) for fact in extracted_facts]),
+                    role=MessageRole.TOOL,
+                    additional_kwargs={"tool_call_id": "context_retrieval"},
                 )
             )
 
-        self.internal_memory.put(
-            ChatMessage(
-                content="\n\n".join([str(fact) for fact in extracted_facts]),
-                role=MessageRole.TOOL,
-                additional_kwargs={"tool_call_id": "context_retrieval"},
-            )
-        )
+            return RouterResponseEvent()
 
-        return RouterResponseEvent()
+        except Exception as e:
+            self.internal_memory.put(
+                ChatMessage(
+                    content=f"Error in context_retrieval process: {e}",
+                    role=MessageRole.TOOL,
+                    additional_kwargs={"tool_call_id": "context_retrieval"},
+                )
+            )
+            raise e
