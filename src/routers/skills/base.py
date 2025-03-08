@@ -2,7 +2,7 @@ import inspect
 import typing
 import uuid
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, Union
 
 from pydantic import BaseModel, TypeAdapter, field_validator, model_validator
 
@@ -79,7 +79,7 @@ class SkillArgAttr(BaseModel):
             adapter = TypeAdapter(eval_type)
             try:
                 adapter.validate_python(default)
-            except Exception as _:
+            except Exception:
                 raise SkillArgException(
                     f"default value {default} is not of type {dtype}"
                 )
@@ -95,7 +95,7 @@ class SkillArgAttr(BaseModel):
             adapter = TypeAdapter(eval_type)
             adapter.validate_python(input)
             return True
-        except Exception as _:
+        except Exception:
             return False
 
 
@@ -195,7 +195,7 @@ class FunctionCallSkill(ABC):
             else:
                 parsed_args[arg.name] = arg.default
 
-        return self.execute(**parsed_args)
+        return self.execute(**parsed_args)  # type: ignore
 
     @abstractmethod
     def execute(self) -> SkillOutput:

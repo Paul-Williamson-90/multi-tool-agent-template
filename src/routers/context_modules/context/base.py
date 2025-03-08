@@ -10,7 +10,8 @@ from pydantic import BaseModel
 from tenacity import before_log, retry, stop_after_attempt, wait_fixed
 
 from src.invocations import non_structured_invocation, structured_invocation
-from src.routers.context_modules.prompts import EXTRACT_TEMPLATE, SUMMARISE_TEMPLATE
+from src.routers.context_modules.prompts import (EXTRACT_TEMPLATE,
+                                                 SUMMARISE_TEMPLATE)
 from src.routers.context_modules.pydantics import ContextInfo, ExtractedFacts
 
 logger = logging.getLogger(__name__)

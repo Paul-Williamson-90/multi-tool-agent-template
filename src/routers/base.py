@@ -15,32 +15,17 @@ from src.invocations import non_structured_invocation, structured_invocation
 from src.routers.condensers import CondenseModuleBase
 from src.routers.constants import DEFAULT_TOKEN_LIMIT
 from src.routers.context_modules import ContextModuleBase
-from src.routers.events import (
-    RouterContextSelectionEvent,
-    RouterEscapeEvent,
-    RouterInputEvent,
-    RouterResponseEvent,
-    RouterToolSelectionEvent,
-    ToolCallEvent,
-)
-from src.routers.prompts import (
-    ACTION_DECISION_INSTRUCTIONS,
-    CONTEXT_SELECTION_INSTRUCTIONS,
-    ERROR_HINT,
-    ESCAPE_PROMPT,
-    RESPONSE_INSTRUCTIONS,
-    ROUNDS_EXCEEDED_HINT,
-    ROUTER_AGENT_PROMPT_TEMPLATE,
-    SYSTEM_PROMPT,
-    TOOL_DECISION_INSTRUCTIONS,
-)
-from src.routers.pydantics import (
-    ContextSelection,
-    NextAction,
-    PlanningStep,
-    SelectedContext,
-    ToolCallResponse,
-)
+from src.routers.events import (RouterContextSelectionEvent, RouterEscapeEvent,
+                                RouterInputEvent, RouterResponseEvent,
+                                RouterToolSelectionEvent, ToolCallEvent)
+from src.routers.prompts import (ACTION_DECISION_INSTRUCTIONS,
+                                 CONTEXT_SELECTION_INSTRUCTIONS, ERROR_HINT,
+                                 ESCAPE_PROMPT, RESPONSE_INSTRUCTIONS,
+                                 ROUNDS_EXCEEDED_HINT,
+                                 ROUTER_AGENT_PROMPT_TEMPLATE, SYSTEM_PROMPT,
+                                 TOOL_DECISION_INSTRUCTIONS)
+from src.routers.pydantics import (ContextSelection, NextAction, PlanningStep,
+                                   SelectedContext, ToolCallResponse)
 from src.routers.skills import SkillMap, SkillOutput
 
 logger = logging.getLogger(__name__)

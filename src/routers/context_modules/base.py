@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from textwrap import dedent
-from typing import Type
 from uuid import UUID
 
 import pandas as pd
