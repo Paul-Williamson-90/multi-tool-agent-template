@@ -39,13 +39,7 @@ logger = logging.getLogger(__name__)
 
 class RouterAgent(Workflow):
     _generation_kwargs: dict[str, Any] = {"max_tokens": 4000}
-    _n_msgs_condense_trigger: int = 4
-    _condence_batch_size: int = 2
-    _condense_kwargs: dict[str, Any] = {"max_tokens": 1000}
     _rounds_limit: int = 5
-    _n_msgs_user_intent: int = 4
-    _condensed: str | None = None
-    _user_intent: str | None = None
     _round: int = 1
 
     def __init__(
