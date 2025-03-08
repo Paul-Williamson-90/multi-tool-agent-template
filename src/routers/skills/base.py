@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import uuid
 import typing
 from typing import Any, Callable, Union, Optional
 import inspect
@@ -37,11 +38,12 @@ class SkillArgAttr(BaseModel):
             eval_type = eval(
                 v, 
                 {"__builtins__": __builtins__}, 
-                {"typing": typing, **vars(typing)}
+                {"typing": typing, "uuid": uuid, **vars(typing)}
             )
             if not any(
                 [
                     inspect.getmodule(eval_type) is typing,
+                    inspect.getmodule(eval_type) is uuid,
                     isinstance(eval_type, type),
                 ]
             ):
@@ -72,7 +74,7 @@ class SkillArgAttr(BaseModel):
             eval_type = eval(
                 dtype,
                 {"__builtins__": __builtins__},
-                {"typing": typing, **vars(typing)},
+                {"typing": typing, "uuid": uuid, **vars(typing)},
             )
             adapter = TypeAdapter(eval_type)
             try:
@@ -88,7 +90,7 @@ class SkillArgAttr(BaseModel):
             eval_type = eval(
                 self.dtype,
                 {"__builtins__": __builtins__},
-                {"typing": typing, **vars(typing)},
+                {"typing": typing, "uuid": uuid, **vars(typing)},
             )
             adapter = TypeAdapter(eval_type)
             adapter.validate_python(input)
@@ -122,7 +124,7 @@ class FunctionCallSkill(ABC):
         self.function_dict = self._prepare_function_dict()
         self.visible_to_human = visible_to_human
 
-    def _prepare_function_dict(self) -> dict[str, dict[str, Union[str, dict]]]:
+    def _prepare_function_dict(self) -> dict:
         return {
             "type": "function",
             "function": {
@@ -180,10 +182,16 @@ class FunctionCallSkill(ABC):
         for arg in self.function_args:
             if arg.name in input_args:
                 if not arg.validate_input_arg(input_args[arg.name]):
-                    return f'Invalid input: argument "{arg.name}" must be of type {arg.dtype}'
+                    return SkillOutput(
+                        response_to_llm=f'Invalid input: argument "{arg.name}" must be of type {arg.dtype}'
+                    )
+                
                 parsed_args[arg.name] = input_args[arg.name]
             elif arg.required and not arg.default:
-                return f'Invalid input: missing required argument "{arg.name}"'
+                return SkillOutput(
+                    response_to_llm=f'Invalid input: missing required argument "{arg.name}"'
+                )
+            
             else:
                 parsed_args[arg.name] = arg.default
 
@@ -213,6 +221,47 @@ class SkillMap:
                 "function_callable": skill.get_function_callable(),
                 "visible_to_human": skill.visible_to_human,
             }
+        self._add_available_tools_to_map()
+
+    def _add_available_tools_to_map(self):
+        if any(
+            self.skill_map[skill]["visible_to_human"]
+            for skill in self.skill_map
+        ):
+            self.skill_map["available_tools"] = {
+                "function_dict": {
+                    "type": "function",
+                    "function": {
+                        "name": "available_tools",
+                        "description": (
+                            "When the user asks what you can do / what tools are available, "
+                            "use this tool to get the necessary information to generate "
+                            "a response to the user."
+                        ),
+                        "parameters": {
+                            "type": "object",
+                            "properties": {},
+                            "required": [],
+                        },
+                    },
+                },
+                "function_callable": self._get_available_tools_description,
+                "visible_to_human": True,
+            }
+
+    def _get_available_tools_description(self, *args, **kwargs) -> SkillOutput:
+        content = "**Here are the tools that you have available:**\n\n"
+        for skill in self.skill_map:
+            if self.skill_map[skill]["visible_to_human"]:
+                content += self.skill_map[skill]["function_dict"]["function"]["description"] + "\n\n"
+        content += (
+            "**When reporting back to the user, you must provide a more user-friendly description of the tools"
+            " for non-technical audience.**\n"
+            "**You should also provide helpful information on how best to get you (the agent) to use the tools.**\n"
+            "**This should include advising the user to be clear with their instructions and to provide all "
+            "the necessary context (e.g. avoid ambiguity, try not to use acronyms, etc.).**"
+        )
+        return SkillOutput(response_to_llm=content)
         
     def get_function_callable_by_name(self, skill_name: str) -> Callable:
         return self.skill_map[skill_name]["function_callable"]
