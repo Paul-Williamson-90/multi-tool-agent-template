@@ -54,9 +54,8 @@ class CondenseModuleBase(ABC):
             return len(chat_history.get_all()) >= self.n_msg_trigger
         assert isinstance(self.n_tokens_trigger, int)
         return (
-            chat_history._token_count_for_messages(
-                chat_history.get_all()
-            ) >= self.n_tokens_trigger
+            chat_history._token_count_for_messages(chat_history.get_all())
+            >= self.n_tokens_trigger
         )
 
     def __call__(self, chat_history: ChatMemoryBuffer) -> CondensedChat:
