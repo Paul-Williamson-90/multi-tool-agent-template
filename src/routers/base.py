@@ -11,7 +11,7 @@ from llama_index.core.memory import ChatMemoryBuffer
 from llama_index.core.workflow import StartEvent, StopEvent, Workflow, step
 from tenacity import before_log, retry, stop_after_attempt, wait_fixed
 
-from src.invocations import non_structured_invocation, structured_invocation
+from src.invocations import non_structured_streamed_invocation, structured_invocation
 from src.routers.condensers import CondenseModuleBase
 from src.routers.constants import DEFAULT_TOKEN_LIMIT
 from src.routers.context_modules import ContextModuleBase
@@ -145,12 +145,11 @@ class RouterAgent(Workflow):
     @step
     async def response(self, ev: RouterResponseEvent) -> StopEvent:
         logger.info(f"[{self.chat_id}]: RouterAgent response")
-        # TODO: Exchange for streamed response
 
         thoughts = self._gather_thoughts()
         condensed = self.condense_module(self.memory)
 
-        output = non_structured_invocation(
+        output = non_structured_streamed_invocation(
             llm=self.llm,
             prompt=RESPONSE_INSTRUCTIONS.format(
                 chat_history=str(condensed),
@@ -158,8 +157,8 @@ class RouterAgent(Workflow):
                 system=self.system_prompt,
             ),
             inference_kwargs=self._generation_kwargs,
+            memory=self.memory,
         )
-        self.memory.put(ChatMessage(content=str(output), role=MessageRole.ASSISTANT))
         return StopEvent(result=output)
 
     @step

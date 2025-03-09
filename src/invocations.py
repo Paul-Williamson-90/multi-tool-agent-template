@@ -4,8 +4,17 @@ from ast import literal_eval
 from typing import Any
 
 from llama_index.core import PromptTemplate
-from llama_index.core.base.llms.types import CompletionResponse
+from llama_index.core.base.llms.types import (
+    ChatMessage,
+    ChatResponse,
+    ChatResponseGen,
+    CompletionResponse,
+    CompletionResponseGen,
+    MessageRole,
+)
+from llama_index.core.chat_engine.types import StreamingAgentChatResponse
 from llama_index.core.llms.llm import LLM
+from llama_index.core.memory import ChatMemoryBuffer
 from pydantic import BaseModel
 from tenacity import before_log, retry, stop_after_attempt, wait_fixed
 
@@ -59,3 +68,41 @@ def non_structured_invocation(
     response_str = str(response)
 
     return response_str
+
+
+@retry(
+    stop=stop_after_attempt(5),
+    wait=wait_fixed(1),
+    before=before_log(logger, logging.INFO),
+)
+def non_structured_streamed_invocation(
+    llm: LLM,
+    prompt: str,
+    memory: ChatMemoryBuffer,
+    inference_kwargs: dict[str, Any] = {},
+) -> str:
+    response: CompletionResponse = llm.stream_complete(
+        prompt=prompt, **inference_kwargs
+    )
+
+    def wrapped_gen(response: CompletionResponseGen) -> ChatResponseGen:
+        full_response = ""
+        for token in response:
+            if token.delta:
+                full_response += token.delta
+                yield ChatResponse(
+                    message=ChatMessage(content=token.text, role=MessageRole.ASSISTANT),
+                    delta=token.delta,
+                )
+
+        assistant_message = ChatMessage(
+            content=full_response, role=MessageRole.ASSISTANT
+        )
+        memory.put(assistant_message)
+
+    return StreamingAgentChatResponse(
+        chat_stream=wrapped_gen(response),
+        sources=[],
+        source_nodes=[],
+        is_writing_to_memory=False,
+    )
