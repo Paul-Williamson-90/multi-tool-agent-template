@@ -80,7 +80,7 @@ def non_structured_streamed_invocation(
     prompt: str,
     memory: ChatMemoryBuffer,
     inference_kwargs: dict[str, Any] = {},
-) -> str:
+) -> StreamingAgentChatResponse:
     response: CompletionResponse = llm.stream_complete(
         prompt=prompt, **inference_kwargs
     )
