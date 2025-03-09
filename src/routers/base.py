@@ -54,6 +54,55 @@ logger = logging.getLogger(__name__)
 
 
 class RouterAgent(Workflow):
+    """The RouterAgent class is the core multi-tool agent architecture, using Llama-Index \
+    Workflow, which is an event-driven process. The flow of the agent is defined by @step decorated \
+    methods which define the agent's behavior at each step of the process and determine which step \
+    to take next.
+
+    Parameters
+    ----------
+    _round : int
+        Tracks how many rounds the agent has been through as part of a termination condition.
+
+    Example Usage:
+    -------------
+    ```python
+    def get_agent(chat_id: uuid.UUID, memory: ChatMemoryBuffer) -> RouterAgent:
+        llm = get_llm()
+
+        skill_map = SkillMap(skills=[Multiply()])
+
+        context_modules = [DummyContextModule(llm=llm, chat_id=chat_id)]
+
+        agent = RouterAgent(
+            chat_id=chat_id,
+            llm=llm,
+            skill_map=skill_map,
+            context_modules=context_modules,
+            chat_history=memory,
+        )
+        return agent
+
+
+    def invoke(agent: RouterAgent, user_input: str) -> StreamingAgentChatResponse:
+        async def run(input: str) -> StreamingAgentChatResponse:
+            response = await agent.run(input=input)
+            return response
+
+        return asyncio.run(run(input=user_input))
+
+    if __name__=="__main__":
+        chat_id = ...
+        memory = ...
+        user_input = ...
+        agent = get_agent(chat_id, memory)
+        response = invoke(agent, user_input)
+        for words in response.chat_stream:
+            if words.delta:
+                print(words.delta, end="", flush=True)
+    ```
+    """
+
     _round: int = 0
 
     def __init__(
@@ -69,6 +118,38 @@ class RouterAgent(Workflow):
         tool_selection_kwargs: dict[str, Any] = {"max_tokens": 500},
         rounds_limit: int = 8,
     ):
+        """Initialize the RouterAgent with the necessary components.
+
+        Parameters
+        ----------
+        llm : LLM
+            The LLM instance to be used for generating responses.
+        skill_map : SkillMap
+            The SkillMap instance to be used for managing tool calls.
+        condense_module : Optional[CondenseModuleBase], optional
+            The module used for condensing chat history for better context window utilisation, by default None
+        context_modules : list[ContextModuleBase], optional
+            A list of context modules that can be combined with retrieval processes for better context management \
+            in the context window, by default []
+        chat_history : Optional[ChatMemoryBuffer], optional
+            The chat history so far with the user, by default None
+        system_prompt : str, optional
+            A system message that is used in the prompts throughout the Agent's flow (must contain {date} in a formatted string), \
+            by default SYSTEM_PROMPT
+        chat_id : Optional[uuid.UUID], optional
+            The UUID of the chat, for use with deployments that utilise a database for storing chats, by default None
+        generation_kwargs : _type_, optional
+            The llm kwargs to pass for generation steps, by default {"max_tokens": 8000}
+        tool_selection_kwargs : _type_, optional
+            The llm kwargs to pass for tool selection steps, by default {"max_tokens": 500}
+        rounds_limit : int, optional
+            The maximum number of reasoning rounds the Agent can perform before its forced to give up, by default 8
+
+        Attributes
+        ----------
+        internal_memory : ChatMemoryBuffer
+            The internal memory of the Agent which stores all the messages created by the Agent in its reasoning process.
+        """
         self.chat_id = chat_id or uuid.uuid4()
         logger.info(f"[{self.chat_id}]: Initializing RouterAgent")
 
@@ -91,6 +172,22 @@ class RouterAgent(Workflow):
 
     @step
     async def prepare_agent(self, ev: StartEvent) -> RouterInputEvent:
+        """Prepares the agent for the conversation.
+        - Resets the round counter.
+        - Resets the condense module.
+        - Resets the internal memory.
+        - Adds the user input to the memory.
+
+        Parameters
+        ----------
+        ev : StartEvent
+            An event that triggers the start of the agent process.
+
+        Returns
+        -------
+        RouterInputEvent
+            An event that triggers the Agent's reasoning process.
+        """
         logger.info(f"[{self.chat_id}]: Preparing RouterAgent")
 
         self._round = 0
@@ -109,6 +206,22 @@ class RouterAgent(Workflow):
     ) -> Union[
         RouterContextSelectionEvent, RouterEscapeEvent, RouterToolSelectionEvent
     ]:
+        """The Agent's reasoning step where it reasons with the context thus far and makes decision \
+        on what to do next (respond to user or call a tool).
+
+        Parameters
+        ----------
+        ev : RouterInputEvent
+            An event that triggers the Agent's reasoning process
+
+        Returns
+        -------
+        Union[ RouterContextSelectionEvent, RouterEscapeEvent, RouterToolSelectionEvent ]
+            An event that triggers the next step in the Agent's reasoning process
+                - RouterContextSelectionEvent: If the Agent decides to respond to the user
+                - RouterEscapeEvent: If the Agent is forced to give up due to an error or too many rounds
+                - RouterToolSelectionEvent: If the Agent decides to call a tool
+        """
         logger.info(f"[{self.chat_id}]: RouterAgent router")
         self._round += 1
 
@@ -148,6 +261,21 @@ class RouterAgent(Workflow):
     async def context_selection(
         self, ev: RouterContextSelectionEvent
     ) -> Union[RouterResponseEvent, RouterEscapeEvent]:
+        """The Agent's context selection step where it decides whether to inject context from a context module \
+        into its response prompt.
+
+        Parameters
+        ----------
+        ev : RouterContextSelectionEvent
+            An event that triggers the Agent's context selection process
+
+        Returns
+        -------
+        Union[RouterResponseEvent, RouterEscapeEvent]
+            An event that triggers the next step in the Agent's reasoning process
+                - RouterResponseEvent: An event where the Agent responds to the user
+                - RouterEscapeEvent: If the Agent is forced to give up due to an error or too many rounds
+        """
         logger.info(f"[{self.chat_id}]: RouterAgent context selection")
 
         if len(self.context_modules) == 0:
@@ -164,6 +292,18 @@ class RouterAgent(Workflow):
 
     @step
     async def response(self, ev: RouterResponseEvent) -> StopEvent:
+        """The Agent's response step where it generates a response to the user.
+
+        Parameters
+        ----------
+        ev : RouterResponseEvent
+            An event that triggers the Agent's response generation
+
+        Returns
+        -------
+        StopEvent
+            An event that signals the end of the Agent's flow
+        """
         logger.info(f"[{self.chat_id}]: RouterAgent response")
 
         thoughts = self._gather_thoughts()
@@ -190,6 +330,20 @@ class RouterAgent(Workflow):
     async def tool_selection(
         self, ev: RouterToolSelectionEvent
     ) -> Union[ToolCallEvent, RouterEscapeEvent]:
+        """The Agent's tool selection step where it decides which tool to call.
+
+        Parameters
+        ----------
+        ev : RouterToolSelectionEvent
+            An event that triggers the Agent's tool selection process
+
+        Returns
+        -------
+        Union[ToolCallEvent, RouterEscapeEvent]
+            An event that triggers the next step in the Agent's reasoning process
+                - ToolCallEvent: An event where the chosen tool is called
+                - RouterEscapeEvent: If the Agent is forced to give up due to an error or too many rounds
+        """
         logger.info(f"[{self.chat_id}]: RouterAgent tool selection")
 
         context = self._structured_response_template(
@@ -220,6 +374,18 @@ class RouterAgent(Workflow):
 
     @step
     async def tool_call_handler(self, ev: ToolCallEvent) -> RouterInputEvent:
+        """Handles the tool calling process by calling the tool and storing the result in the internal memory.
+
+        Parameters
+        ----------
+        ev : ToolCallEvent
+            An event that triggers the Agent's tool calling
+
+        Returns
+        -------
+        RouterInputEvent
+            An event that triggers the Agent's reasoning process
+        """
         logger.info(f"[{self.chat_id}]: RouterAgent tool call handler")
 
         tool_call = ev.tool_call
@@ -267,6 +433,18 @@ class RouterAgent(Workflow):
 
     @step
     async def escape_route(self, ev: RouterEscapeEvent) -> RouterResponseEvent:
+        """Handles the escape route of the Agent, where it is forced to give up due to an error or too many rounds.
+
+        Parameters
+        ----------
+        ev : RouterEscapeEvent
+            An event that triggers the Agent's escape route
+
+        Returns
+        -------
+        RouterResponseEvent
+            An event that triggers the Agent to respond to the user with an escape hint
+        """
         logger.info(f"[{self.chat_id}]: RouterAgent escape route: {ev.hint}")
         self.internal_memory.put(
             ChatMessage(
@@ -277,6 +455,18 @@ class RouterAgent(Workflow):
         return RouterResponseEvent()
 
     def _prepare_system_prompt(self, system_prompt: str) -> str:
+        """Prepares the system prompt by formatting the date into the prompt.
+
+        Parameters
+        ----------
+        system_prompt : str
+            The system prompt to be prepared
+
+        Returns
+        -------
+        str
+            The prepared system prompt
+        """
         if "{date}" in system_prompt:
             system_prompt = system_prompt.format(
                 date=datetime.now().strftime("%Y-%m-%d")
@@ -284,6 +474,13 @@ class RouterAgent(Workflow):
         return system_prompt
 
     def _prepare_internal_memory(self) -> ChatMemoryBuffer:
+        """Prepares the internal memory of the Agent.
+
+        Returns
+        -------
+        ChatMemoryBuffer
+            The internal memory of the Agent
+        """
         internal_memory: ChatMemoryBuffer = self._prepare_chat_memory()
         internal_memory.put_messages(self.memory.get_all())
         return internal_memory
@@ -291,17 +488,53 @@ class RouterAgent(Workflow):
     def _prepare_chat_memory(
         self, memory: Optional[ChatMemoryBuffer] = None
     ) -> ChatMemoryBuffer:
+        """Prepares the chat memory of the Agent. One is created if not provided.
+
+        Parameters
+        ----------
+        memory : Optional[ChatMemoryBuffer], optional
+            The chat history with the user, by default None
+
+        Returns
+        -------
+        ChatMemoryBuffer
+            The chat memory
+        """
         return memory or ChatMemoryBuffer(
             token_limit=DEFAULT_TOKEN_LIMIT
         ).from_defaults(llm=self.llm)
 
     def _gather_thoughts(self) -> str:
+        """Gathers the Agent's internal memory (thoughts) and tool call outputs.
+
+        Returns
+        -------
+        str
+            The thoughts of the Agent
+        """
         thoughts = self.internal_memory.get_all()
         return "\n".join([str(msg) for msg in thoughts])
 
     def _prepare_context_modules(
         self, context_modules: list[ContextModuleBase]
     ) -> dict[str, ContextModuleBase]:
+        """Prepares the context modules of the Agent.
+
+        Parameters
+        ----------
+        context_modules : list[ContextModuleBase]
+            A list of context modules to be used by the Agent
+
+        Returns
+        -------
+        dict[str, ContextModuleBase]
+            A dictionary of context modules with their names as keys
+
+        Raises
+        ------
+        ValueError
+            If a duplicate context module name
+        """
         module_dict: dict[str, ContextModuleBase] = {}
         for module in context_modules:
             if module.get_name() in module_dict:
@@ -315,6 +548,20 @@ class RouterAgent(Workflow):
     def _structured_response_template(
         self, instructions: str, tools_available: bool = True
     ) -> str:
+        """Creates a structured response template for the Agent's reasoning steps.
+
+        Parameters
+        ----------
+        instructions : str
+            The instructions for the Agent to follow
+        tools_available : bool, optional
+            Whether to include tool information in the prompt, by default True
+
+        Returns
+        -------
+        str
+            The structured response template
+        """
         condensed = self.condense_module(self.memory)
         thoughts = self._gather_thoughts()
 
@@ -338,6 +585,19 @@ class RouterAgent(Workflow):
         before=before_log(logger, logging.INFO),
     )
     def _context_selection(self) -> RouterResponseEvent:
+        """The Agent's context selection process where it selects context from a context module \
+        and stores the extracted facts in the internal memory.
+
+        Returns
+        -------
+        RouterResponseEvent
+            An event that triggers the Agent's response to the user
+
+        Raises
+        ------
+        Exception
+            If an error occurs during the context selection process
+        """
         context = self._structured_response_template(
             instructions=CONTEXT_SELECTION_INSTRUCTIONS, tools_available=False
         )

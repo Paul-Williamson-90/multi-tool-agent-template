@@ -81,6 +81,19 @@ CONDENSED_TEMPLATE = """# CHAT HISTORY:
 
 
 class StandardCondenser(CondenseModuleBase):
+    """A standard condenser module that condenses the chat history to save space in the context window of the LLM.
+    A condense module is a chat history management module that condenses the chat history \
+    to save space in the context window of the LLM. This helps reduce the needle-in-the-haystack \
+    problem that causes LLM performance to degrade over time.
+
+    Parameters
+    ----------
+    _user_intent_kwargs : dict[str, Any], optional
+        The inference kwargs for the user intent prompt, by default {"max_tokens": 300}
+    _condense_kwargs : dict[str, Any], optional
+        The inference kwargs for the condense prompt, by default {"max_tokens": 1000}
+    """
+
     _user_intent_kwargs: dict[str, Any] = {"max_tokens": 300}
     _condense_kwargs: dict[str, Any] = {"max_tokens": 1000}
 
@@ -92,12 +105,39 @@ class StandardCondenser(CondenseModuleBase):
         n_msgs_user_intent: int = 6,
         condense_batch_size: int = 2,
     ):
+        """Initializes the StandardCondenser class.
+
+        Parameters
+        ----------
+        llm : LLM
+            The LLM module to be invoked.
+        n_msg_trigger : Optional[int], optional
+            The number of messages that triggers the module, by default 5
+        n_tokens_trigger : Optional[int], optional
+            The number of tokens that triggers the module, by default None
+        n_msgs_user_intent : int, optional
+            The number of prior messages to use when inferring the user's intent, by default 6
+        condense_batch_size : int, optional
+            The number of messages to be condensed at a time (batch processing), by default 2
+        """
         super().__init__(n_msg_trigger, n_tokens_trigger)
         self.llm = llm
         self._n_msgs_user_intent = n_msgs_user_intent
         self._condense_batch_size = condense_batch_size
 
     def get_user_intent(self, chat_history: ChatMemoryBuffer) -> str:
+        """Get the user's intent from the chat history.
+
+        Parameters
+        ----------
+        chat_history : ChatMemoryBuffer
+            The chat history to be condensed.
+
+        Returns
+        -------
+        str
+            The user's intent.
+        """
         history = chat_history.get_all().copy()
         user_msg = history.pop()
         last_n_msgs = history[-self._n_msgs_user_intent :]
@@ -114,6 +154,22 @@ class StandardCondenser(CondenseModuleBase):
     def _extract_relevant(
         self, messages: list[str], condensed: str, user_intent: str
     ) -> str:
+        """Extract relevant information from the chat history that relates to the user's intent.
+
+        Parameters
+        ----------
+        messages : list[str]
+            The messages to be condensed.
+        condensed : str
+            The condensed chat history so far.
+        user_intent : str
+            The user's intent.
+
+        Returns
+        -------
+        str
+            The extracted relevant information.
+        """
         batch_str = "\n".join([str(msg) for msg in messages])
 
         prompt = CHAT_HISTORY_CONDENSE.format(
@@ -134,6 +190,18 @@ class StandardCondenser(CondenseModuleBase):
         return str(response)
 
     def condense_chat_history(self, chat_history: ChatMemoryBuffer) -> str:
+        """Condense the chat history to save space in the context window of the LLM.
+
+        Parameters
+        ----------
+        chat_history : ChatMemoryBuffer
+            The chat history to be condensed.
+
+        Returns
+        -------
+        str
+            The condensed chat history
+        """
         user_intent = self.get_user_intent(chat_history)
         messages = chat_history.get_all()[:-1]
         condensed_list: list[str] = []

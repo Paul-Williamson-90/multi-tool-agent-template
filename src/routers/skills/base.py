@@ -2,7 +2,7 @@ import inspect
 import typing
 import uuid
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Union
+from typing import Any, Callable
 
 from pydantic import BaseModel, TypeAdapter, field_validator, model_validator
 
@@ -17,13 +17,20 @@ class SkillOutput(BaseModel):
 
 
 class SkillArgAttr(BaseModel):
-    """
-    Attributes:
-    - name: str - name of the argument
-    - dtype: str - data type of the argument (typing or python type)
-    - description: str - description of the argument
-    - required: bool - whether the argument is required or not
-    - default: Any - default value of the argument
+    """Defines an input argument for a skill.
+
+    Parameters
+    ----------
+    name : str
+        The name of the argument.
+    dtype : str
+        The data type of the argument.
+    description : str
+        The description of the argument.
+    required : bool, optional
+        Whether the argument is required or not, by default False.
+    default : Any, optional
+        The default value of the argument, by default None.
     """
 
     name: str
@@ -34,6 +41,18 @@ class SkillArgAttr(BaseModel):
 
     @field_validator("dtype")
     def dtype_validation(cls, v: str) -> Any:
+        """Validates the data type of the argument.
+
+        Parameters
+        ----------
+        v : str
+            The data type of the argument.
+
+        Returns
+        -------
+        Any
+            The data type of the argument.
+        """
         try:
             eval_type = eval(
                 v,
@@ -58,6 +77,18 @@ class SkillArgAttr(BaseModel):
 
     @model_validator(mode="before")
     def required_and_default_validation(cls, values: dict[str, Any]) -> dict[str, Any]:
+        """Validates the required and default values of the argument.
+
+        Parameters
+        ----------
+        values : dict[str, Any]
+            The values of the argument.
+
+        Returns
+        -------
+        dict[str, Any]
+            The values of the argument.
+        """
         required = values.get("required")
         default = values.get("default")
         if required and default is not None:
@@ -68,6 +99,13 @@ class SkillArgAttr(BaseModel):
 
     @model_validator(mode="after")
     def default_correct_dtype(self) -> "SkillArgAttr":
+        """Validates the default value of the argument.
+
+        Returns
+        -------
+        SkillArgAttr
+            The argument object.
+        """
         dtype = self.dtype
         default = self.default
         if default is not None:
@@ -86,6 +124,18 @@ class SkillArgAttr(BaseModel):
         return self
 
     def validate_input_arg(self, input: Any) -> bool:
+        """Validates the input argument.
+
+        Parameters
+        ----------
+        input : Any
+            The input argument.
+
+        Returns
+        -------
+        bool
+            Whether the input argument is valid or not.
+        """
         try:
             eval_type = eval(
                 self.dtype,
@@ -100,6 +150,41 @@ class SkillArgAttr(BaseModel):
 
 
 class FunctionCallSkill(ABC):
+    """Parent class for defining a skill that can be called by the LLM router agent.
+
+    Example Usage:
+    -------------
+    ```python
+    from src.routers.skills.base import FunctionCallSkill, SkillArgAttr, SkillOutput
+
+
+    class Multiply(FunctionCallSkill):
+        def __init__(
+            self,
+            name: str = "multiply",
+            description: str = "Use this tool to multiply two numbers.",
+            function_args=[
+                SkillArgAttr(
+                    name="a", dtype="float", description="First number", required=True
+                ),
+                SkillArgAttr(
+                    name="b", dtype="float", description="Second number", required=True
+                ),
+            ],
+            visible_to_human: bool = True,
+        ):
+            super().__init__(
+                name=name,
+                description=description,
+                function_args=function_args,
+                visible_to_human=visible_to_human,
+            )
+
+        def execute(self, a: float, b: float) -> float:  # type: ignore
+            return SkillOutput(response_to_llm=f"{a} times {b} is {a*b}")
+    ```
+    """
+
     def __init__(
         self,
         name: str,
@@ -107,15 +192,18 @@ class FunctionCallSkill(ABC):
         function_args: list[SkillArgAttr] = [],
         visible_to_human: bool = False,
     ):
-        """
-        Instantiates a FunctionCallSkill object.
-        This object is used to define a skill that can be called by the LLM router agent.
+        """Instantiates a FunctionCallSkill object.
 
-        Args:
-        - name: str - name of the function
-        - description: str - description of the function
-        - function_args: list[SkillArgAttr] - list of SkillArgAttr objects that define the arguments of the function
-        - visible_to_human: bool - whether the function is visible to the human or not
+        Parameters
+        ----------
+        name : str
+            The name of the skill.
+        description : str
+            The description of the skill.
+        function_args : list[SkillArgAttr], optional
+            The arguments of the skill, by default [].
+        visible_to_human : bool, optional
+            Whether the RouterAgent should let the user know this skill exists when asked, by default False
         """
         self.name = name
         self.description = description
@@ -125,6 +213,13 @@ class FunctionCallSkill(ABC):
         self.visible_to_human = visible_to_human
 
     def _prepare_function_dict(self) -> dict:
+        """Prepares the function dictionary / schema.
+
+        Returns
+        -------
+        dict
+            The function dictionary / schema.
+        """
         return {
             "type": "function",
             "function": {
@@ -153,24 +248,47 @@ class FunctionCallSkill(ABC):
         }
 
     def get_function_name(self) -> str:
+        """Gets the name of the function.
+
+        Returns
+        -------
+        str
+            The name of the function.
+        """
         return self.name
 
-    def get_function_dict(self) -> dict[str, dict[str, Union[str, dict]]]:
+    def get_function_dict(self) -> dict:
+        """Gets the function dictionary / schema.
+
+        Returns
+        -------
+        dict[str, dict[str, Union[str, dict]]]
+            The function dictionary / schema.
+        """
         return self.function_dict
 
     def get_function_callable(self) -> Callable:
+        """Get the skill's function callable.
+
+        Returns
+        -------
+        Callable
+            The skill's function callable.
+        """
         return self.function_callable
 
     def handle_router_input(self, input: dict[str, Any]) -> SkillOutput:
-        """
-        This method is used to handle the input from the LLM router agent.
-        It will call the execute method and return the result.
+        """Handles the input from the RouterAgent.
 
-        Args:
-        - args: dict[str, Any] - input from the LLM router agent
+        Parameters
+        ----------
+        input : dict[str, Any]
+            The input from the RouterAgent.
 
-        Returns:
-        - SkillOutput - result of the execute method
+        Returns
+        -------
+        SkillOutput
+            The output from the skill.
         """
         if len(self.function_args) == 0:
             return self.execute()
@@ -199,20 +317,47 @@ class FunctionCallSkill(ABC):
 
     @abstractmethod
     def execute(self) -> SkillOutput:
-        """
-        Abstract method that should be implemented by the child class.
-        This method should contain the logic of the function that the skill is supposed to execute.
+        """Abstract method to be implemented by the child class.
+        This method should contain the logic for the skill execution.
+
+        Returns
+        -------
+        SkillOutput
+            The output from the skill.
         """
 
 
 class SkillMap:
-    def __init__(self, skills: list[FunctionCallSkill]):
-        """
-        Instantiates a SkillMap object.
-        This object is used to store a list of FunctionCallSkill objects.
+    """A class to manage a collection of FunctionCallSkill objects that the RouterAgent can use.
+    The module is a component of the RouterAgent.
 
-        Args:
-        - skills: list[FunctionCallSkill] - list of FunctionCallSkill objects
+    Example Usage:
+    -------------
+    ```python
+    from src.routers.base import RouterAgent
+    from src.routers.skills import SkillMap
+    from working_example.skills import Multiply
+    ...
+
+    skill_map = SkillMap(skills=[Multiply()])
+
+    agent = RouterAgent(
+        chat_id=hat_id,
+        llm=llm,
+        skill_map=skill_map,
+        context_modules=context_modules,
+        chat_history=memory,
+    )
+    ```
+    """
+
+    def __init__(self, skills: list[FunctionCallSkill]):
+        """Instantiates a SkillMap object.
+
+        Parameters
+        ----------
+        skills : list[FunctionCallSkill]
+            A list of FunctionCallSkill objects.
         """
         self.skill_map: dict = dict()
         for skill in skills:
@@ -220,6 +365,13 @@ class SkillMap:
         self._add_available_tools_to_map()
 
     def add_skill(self, skill: FunctionCallSkill):
+        """Adds a skill to the skill map.
+
+        Parameters
+        ----------
+        skill : FunctionCallSkill
+            The skill to be added.
+        """
         self.skill_map[skill.get_function_name()] = {
             "function_dict": skill.get_function_dict(),
             "function_callable": skill.get_function_callable(),
@@ -227,6 +379,10 @@ class SkillMap:
         }
 
     def _add_available_tools_to_map(self):
+        """Adds the available_tools skill to the skill map.
+        This skill is used to get the necessary information to generate a response to the user
+        when the user asks what the RouterAgent can do / what tools are available.
+        """
         if any(self.skill_map[skill]["visible_to_human"] for skill in self.skill_map):
             self.skill_map["available_tools"] = {
                 "function_dict": {
@@ -250,6 +406,15 @@ class SkillMap:
             }
 
     def _get_available_tools_description(self, *args, **kwargs) -> SkillOutput:
+        """Gets the description of the available tools. This information is passed to \
+        the RouterAgent when the user asks what tools it has and the Agent calls the \
+        'available_tools' skill.
+
+        Returns
+        -------
+        SkillOutput
+            The description of the available tools
+        """
         content = "**Here are the tools that you have available:**\n\n"
         for skill in self.skill_map:
             if self.skill_map[skill]["visible_to_human"]:
@@ -269,25 +434,79 @@ class SkillMap:
         return SkillOutput(response_to_llm=content)
 
     def get_function_callable_by_name(self, skill_name: str) -> Callable:
+        """Gets the function callable of a skill by name.
+
+        Parameters
+        ----------
+        skill_name : str
+            The name of the skill.
+
+        Returns
+        -------
+        Callable
+            The function callable of the skill.
+        """
         return self.skill_map[skill_name]["function_callable"]
 
     def get_combined_function_description_for_agent(self) -> list[dict]:
+        """Gets the combined function description for the RouterAgent. This information is \
+        passed to the RouterAgent during its reasoning and tool selection steps.
+
+        Returns
+        -------
+        list[dict]
+            The combined function description for the RouterAgent.
+        """
         combined_dict: list[dict] = []
         for _, function_attr in self.skill_map.items():
             combined_dict.append(function_attr["function_dict"])
         return combined_dict
 
     def get_function_list(self) -> list[str]:
+        """Gets the list of skill names in the skill map.
+
+        Returns
+        -------
+        list[str]
+            The list of skill names in the skill map.
+        """
         return list(self.skill_map.keys())
 
     def get_list_of_function_callables(self) -> list[Callable]:
+        """Gets the list of function callables in the skill map.
+
+        Returns
+        -------
+        list[Callable]
+            The list of function callables in the skill map
+        """
         return [skill["function_callable"] for skill in self.skill_map.values()]
 
     def get_function_dict_by_name(self, skill_name: str) -> str:
+        """Gets the function dictionary of a skill by name.
+
+        Parameters
+        ----------
+        skill_name : str
+            The name of the skill.
+
+        Returns
+        -------
+        str
+            The function dictionary of the skill.
+        """
         return str(self.skill_map[skill_name]["function_dict"]["function"])
 
     @property
     def info(self) -> str:
+        """Gets the information about the tools available in the skill map. This information \
+        is used in the RouterAgent reasoning and tool selection steps.
+
+        Returns
+        -------
+        str
+            The information about the tools available in the skill map.
+        """
         tools_meta_list: list[str] = []
         for func in self.get_function_list():
             tools_meta_list.append(self.get_function_dict_by_name(func))
