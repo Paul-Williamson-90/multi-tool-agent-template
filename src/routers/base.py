@@ -147,7 +147,7 @@ class RouterAgent(Workflow):
     @step
     async def context_selection(
         self, ev: RouterContextSelectionEvent
-    ) -> RouterResponseEvent:
+    ) -> Union[RouterResponseEvent, RouterEscapeEvent]:
         logger.info(f"[{self.chat_id}]: RouterAgent context selection")
 
         if len(self.context_modules) == 0:
@@ -187,7 +187,7 @@ class RouterAgent(Workflow):
         return StopEvent(result=output)
 
     @step
-    async def tool_selection(self, ev: RouterToolSelectionEvent) -> ToolCallEvent:
+    async def tool_selection(self, ev: RouterToolSelectionEvent) -> Union[ToolCallEvent, RouterEscapeEvent]:
         logger.info(f"[{self.chat_id}]: RouterAgent tool selection")
 
         context = self._structured_response_template(
