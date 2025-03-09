@@ -6,7 +6,7 @@ A multi-tool agent template with Llama-Index using the Workflow event-driven arc
 # Example
 See example.py file in the root of the project for a working demonstration.
 
-# Tenplate Explained
+# Template Explained
 ## RouterAgent (src.routers.base.RouterAgent)
 This class is the router LLM that will receive a text input, and return a response. It has tools available to it via 'Skills' which are defined by the programmer and passed via the SkillMap class. Additionally, the router agent can be fitted with a condense_module for condensing the chat history (improved context window management) and ensuring the user's message has relevant context from prior messages. Finally, context_modules can be added for managing large retrieved context.
 
