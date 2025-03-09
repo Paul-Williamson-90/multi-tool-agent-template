@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Optional
 
 from llama_index.core.memory import ChatMemoryBuffer
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 
 class TriggerMode(Enum):
@@ -18,8 +18,14 @@ class CondensedChat(BaseModel):
     def __str__(self) -> str:
         return (
             f"# CHAT HISTORY:\n<chat_history>{self.condensed}</chat_history>\n\n"
-            f"# USER'S LAST MESSAGE:\n<user_intent>{self.user_intent}</user_intent>"
+            f"# USER'S LAST MESSAGE:\n{self.user_intent}"
         )
+
+    @model_validator(mode="after")
+    def user_intent_post_format(self):
+        if "user:" != self.user_intent.split()[0].lower():
+            self.user_intent = f"user: {self.user_intent}"
+        return self
 
 
 class CondenseModuleBase(ABC):
