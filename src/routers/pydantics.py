@@ -52,7 +52,7 @@ class PlanningStep(BaseModel):
     def as_msg(self) -> ChatMessage:
         return ChatMessage(
             content="\n".join([str(step) for step in self.steps]),
-            user=MessageRole.ASSISTANT,
+            role=MessageRole.ASSISTANT,
         )
 
 
@@ -70,7 +70,7 @@ class ToolCallResponse(BaseModel):
         return str(self.output)
 
     def as_msg(self) -> ChatMessage:
-        return ChatMessage(content=str(self.output), user=MessageRole.ASSISTANT)
+        return ChatMessage(content=str(self.output), role=MessageRole.ASSISTANT)
 
 
 class ContextExtraction(BaseModel):

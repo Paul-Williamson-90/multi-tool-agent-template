@@ -246,7 +246,7 @@ class SkillMap:
                     },
                 },
                 "function_callable": self._get_available_tools_description,
-                "visible_to_human": True,
+                "visible_to_human": False,
             }
 
     def _get_available_tools_description(self, *args, **kwargs) -> SkillOutput:
@@ -254,7 +254,9 @@ class SkillMap:
         for skill in self.skill_map:
             if self.skill_map[skill]["visible_to_human"]:
                 content += (
-                    self.skill_map[skill]["function_dict"]["function"]["description"]
+                    self.skill_map[skill]["function_dict"]["function"]["name"]
+                    + ": "
+                    + self.skill_map[skill]["function_dict"]["function"]["description"]
                     + "\n\n"
                 )
         content += (

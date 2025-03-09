@@ -43,6 +43,13 @@ from src.routers.pydantics import (
 )
 from src.routers.skills import SkillMap, SkillOutput
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.FileHandler("temp.log"),  # Save logs to temp.log
+    ],
+)
 logger = logging.getLogger(__name__)
 
 
@@ -93,6 +100,7 @@ class RouterAgent(Workflow):
         user_input = ev.input
         user_msg = ChatMessage(role=MessageRole.USER, content=user_input)
         self.memory.put(user_msg)
+        self.condense_module(self.memory)
         return RouterInputEvent()
 
     @step
@@ -111,11 +119,17 @@ class RouterAgent(Workflow):
             context = self._structured_response_template(
                 instructions=ACTION_DECISION_INSTRUCTIONS
             )
+            logger.info(
+                f"[{self.chat_id}]: RouterAgent planning step\n<prompt>{context}</prompt>"
+            )
             response: PlanningStep = structured_invocation(  # type: ignore
                 llm=self.llm,
                 context=context,
                 pydantic_object=PlanningStep,
                 llm_kwargs=self._generation_kwargs,
+            )
+            logger.info(
+                f"[{self.chat_id}]: RouterAgent planning step response: {response}"
             )
 
         except Exception as e:
@@ -141,7 +155,12 @@ class RouterAgent(Workflow):
         if sum([len(module) for module in self.context_modules.values()]) == 0:
             return RouterResponseEvent()
 
-        return self._context_selection()
+        try:
+            return self._context_selection()
+
+        except Exception as e:
+            logger.error(f"[{self.chat_id}]: RouterAgent context selection error: {e}")
+            return RouterEscapeEvent(hint=ERROR_HINT)
 
     @step
     async def response(self, ev: RouterResponseEvent) -> StopEvent:
@@ -149,14 +168,19 @@ class RouterAgent(Workflow):
 
         thoughts = self._gather_thoughts()
         condensed = self.condense_module(self.memory)
+        prompt = RESPONSE_INSTRUCTIONS.format(
+            chat_history=str(condensed),
+            thoughts=thoughts,
+            system=self.system_prompt,
+        )
+
+        logger.info(
+            f"[{self.chat_id}]: RouterAgent response step\n<prompt>{prompt}</prompt>"
+        )
 
         output = non_structured_streamed_invocation(
             llm=self.llm,
-            prompt=RESPONSE_INSTRUCTIONS.format(
-                chat_history=str(condensed),
-                thoughts=thoughts,
-                system=self.system_prompt,
-            ),
+            prompt=prompt,
             inference_kwargs=self._generation_kwargs,
             memory=self.memory,
         )
@@ -170,18 +194,27 @@ class RouterAgent(Workflow):
             instructions=TOOL_DECISION_INSTRUCTIONS
         )
 
-        response: ToolCallResponse = structured_invocation(  # type: ignore
-            llm=self.llm,
-            context=context,
-            pydantic_object=ToolCallResponse,
-            llm_kwargs=self._tool_selection_kwargs,
+        logger.info(
+            f"[{self.chat_id}]: RouterAgent tool selection step\n<prompt>{context}</prompt>"
         )
 
-        logger.info(f"[{self.chat_id}]: RouterAgent tool call: {response.output}")
+        try:
+            response: ToolCallResponse = structured_invocation(  # type: ignore
+                llm=self.llm,
+                context=context,
+                pydantic_object=ToolCallResponse,
+                llm_kwargs=self._tool_selection_kwargs,
+            )
 
-        self.internal_memory.put(response.as_msg())
+            logger.info(f"[{self.chat_id}]: RouterAgent tool call: {response.output}")
 
-        return ToolCallEvent(tool_call=response.output)
+            self.internal_memory.put(response.as_msg())
+
+            return ToolCallEvent(tool_call=response.output)
+
+        except Exception as e:
+            logger.error(f"[{self.chat_id}]: RouterAgent tool selection error: {e}")
+            return RouterEscapeEvent(tool_call=ERROR_HINT)
 
     @step
     async def tool_call_handler(self, ev: ToolCallEvent) -> RouterInputEvent:
@@ -277,14 +310,21 @@ class RouterAgent(Workflow):
             self.skill_map.add_skill(module.verify_tool)
         return module_dict
 
-    def _structured_response_template(self, instructions: str) -> str:
+    def _structured_response_template(
+        self, instructions: str, tools_available: bool = True
+    ) -> str:
         condensed = self.condense_module(self.memory)
         thoughts = self._gather_thoughts()
 
         context = ROUTER_AGENT_PROMPT_TEMPLATE.format(
             chat_history=str(condensed),
             system=self.system_prompt,
-            tools=self.skill_map.info,
+            tools=self.skill_map.info
+            if tools_available
+            else "No tools available at this time.",
+            context_modules="\n".join(
+                [module.info for module in self.context_modules.values()]
+            ),
             thoughts=thoughts,
             instructions=instructions,
         )
@@ -297,13 +337,22 @@ class RouterAgent(Workflow):
     )
     def _context_selection(self) -> RouterResponseEvent:
         context = self._structured_response_template(
-            instructions=CONTEXT_SELECTION_INSTRUCTIONS
+            instructions=CONTEXT_SELECTION_INSTRUCTIONS, tools_available=False
         )
+
+        logger.info(
+            f"[{self.chat_id}]: RouterAgent context selection step\n<prompt>{context}</prompt>"
+        )
+
         response: ContextSelection = structured_invocation(  # type: ignore
             llm=self.llm,
             context=context,
             pydantic_object=ContextSelection,
             llm_kwargs=self._tool_selection_kwargs,
+        )
+
+        logger.info(
+            f"[{self.chat_id}]: RouterAgent context selection response: {response}"
         )
 
         if len(response.contexts) == 0:
