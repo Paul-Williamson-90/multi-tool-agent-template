@@ -2,7 +2,7 @@ from textwrap import dedent
 
 from llama_index.core import PromptTemplate
 
-SYSTEM_PROMPT = """You are a helpful AI ChatBot. Today's date is {date}."""
+SYSTEM_PROMPT = """You are a helpful AI ChatBot Assistant. Today's date is {date}."""
 
 
 ACTION_DECISION_INSTRUCTIONS = """# Instructions
@@ -28,39 +28,45 @@ that will be useful for generating a response to the user.**
 
 RESPONSE_INSTRUCTIONS = PromptTemplate(
     dedent(
-        """# SYSTEM\n
-        <system>{system}</system>\n\n
+        """# SYSTEM
+<system>{system}</system>
 
-        {chat_history}\n\n
+{chat_history}
 
-        # ASSISTANT'S THOUGHTS AND TOOL CALLS:\n
-        {thoughts}\n\n
+# AI ASSISTANT'S THOUGHTS AND TOOL CALLS SO FAR:
+{thoughts}
 
-        # Instructions\n
-        <instructions>- Now generate the response to the user based on your prior thoughts.\n
-        - You are encourages to use the following formatting to provide clarity in your response back to the user:\n
-        \t- # Headers and ## Subheaders, using '#' markers.\n
-        \t- **Bold** and *italic* text, using either single '*' for italics or double '**' for bold.\n
-        \t- New lines, tabs, bullet points and numbered lists.\n
-        \t- No other formatting is allowed.\n</instructions>\n\n
-        """
+# Instructions
+<instructions>- Now generate the response to the user based on your prior thoughts.
+- You are encourages to use the following formatting to provide clarity in your response back to the user:
+\t- # Headers and ## Subheaders, using '#' markers.
+\t- **Bold** and *italic* text, using either single '*' for italics or double '**' for bold.
+\t- New lines, tabs, bullet points and numbered lists.
+\t- No other formatting is allowed.
+</instructions>
+"""
     )
 )
 
 
 ROUTER_AGENT_PROMPT_TEMPLATE = PromptTemplate(
     dedent(
-        """# SYSTEM:\n
-        <system>{system}\n
-        {instructions}</system>\n\n
+        """# SYSTEM:
+<system>{system}
 
-        # TOOLS AVAILABLE:\n
-        <tools>{tools}</tools>\n\n
+{instructions}
 
-        {chat_history}\n\n
+{context_modules}
+</system>
 
-        # ASSISTANT'S THOUGHTS AND TOOL CALLS:\n
-        {thoughts}"""
+# TOOLS AVAILABLE:
+<tools>{tools}</tools>
+
+{chat_history}
+
+# AI ASSISTANT'S THOUGHTS AND TOOL CALLS SO FAR:
+{thoughts}
+"""
     )
 )
 
@@ -68,11 +74,11 @@ ROUTER_AGENT_PROMPT_TEMPLATE = PromptTemplate(
 ESCAPE_PROMPT = PromptTemplate(
     dedent(
         """You are running into some issues providing the user with the information they've requested:\n
-        <hint>{hint}</hint>\n\n
+<hint>{hint}</hint>\n\n
 
-        Your task is to generate a response back to the user apologising, and following the hint provided. \
-        Your response must be conversational and supportive.
-        """
+Your task is to generate a response back to the user apologising, and following the hint provided. \
+Your response must be conversational and supportive.
+"""
     )
 )
 
