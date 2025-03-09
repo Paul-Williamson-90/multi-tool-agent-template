@@ -58,9 +58,6 @@ CHAT_HISTORY_CONDENSE = PromptTemplate(
 CONDENSED_TEMPLATE = """# CHAT HISTORY:
 **This is a condensed chat history to save space:**
 {condensed}
-
-# USER'S LAST MESSAGE:
-{user_last_message}
 """
 
 
@@ -132,6 +129,5 @@ class StandardCondenser(CondenseModuleBase):
 
         condensed = CONDENSED_TEMPLATE.format(
             condensed=condensed,
-            user_last_message=user_intent,
         )
         return condensed
