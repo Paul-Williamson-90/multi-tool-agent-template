@@ -12,11 +12,11 @@ logger = logging.getLogger(__name__)
 class DummyContent(Content):
     content: str
     title: str
-    reference: str
+    content_id: str
 
     def __str__(self) -> str:
         return (
-            f"<content>{self.title}: <ref>{self.reference}</ref>\n"
+            f"<content>{self.title}: <ref>{self.short_reference}</ref>\n"
             f"{self.content}</content>"
         )
 
@@ -26,10 +26,10 @@ class DummyContent(Content):
 
     @property
     def short_reference(self) -> str:
-        return self.reference
-    
+        return self.content_id
+
     def reference_match(self, reference: str) -> bool:
-        return reference == self.reference
+        return reference == self.short_reference
 
 
 class DummyContext(Context):
@@ -80,6 +80,6 @@ class DummyContextModule(ContextModuleBase):
         self.add_context(
             DummyContext(
                 chat_id=chat_id,
-                context="This is a dummy memory object for developer testing."
+                context="This is a dummy memory object for developer testing.",
             )
         )

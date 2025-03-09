@@ -7,7 +7,7 @@ logging.basicConfig(level=logging.INFO)
 warnings.filterwarnings("ignore")
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     agent = get_agent()
 
     while True:

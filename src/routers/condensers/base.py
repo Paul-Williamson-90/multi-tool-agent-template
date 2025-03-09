@@ -73,13 +73,13 @@ class CondenseModuleBase(ABC):
             user_intent=user_intent,
             condensed="\n".join([str(msg) for msg in chat_history.get_all()[:-1]]),
         )
-    
+
     def _non_trigger_condense(self, chat_history: ChatMemoryBuffer) -> str:
         messages = chat_history.get_all()
         if len(messages) > 0:
             return "\n".join([str(msg) for msg in messages[:-1]])
         return "**There are no previous messages in the chat history.**"
-    
+
     def _condense(self, chat_history: ChatMemoryBuffer) -> str:
         if not self.condensed:
             out = self.condense_chat_history(chat_history)
@@ -87,7 +87,7 @@ class CondenseModuleBase(ABC):
                 out = "**There was no previous chat history that was relevant to the user's current request.**"
             self.condensed = out
         return self.condensed
-    
+
     def _user_intent(self, chat_history: ChatMemoryBuffer) -> str:
         if not self.user_intent:
             out = self.get_user_intent(chat_history)

@@ -19,25 +19,18 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 
 def get_llm() -> OpenAI:
-    return OpenAI(
-        model="gpt-4o",
-        api_key=OPENAI_API_KEY
-    )
+    return OpenAI(model="gpt-4o", api_key=OPENAI_API_KEY)
+
 
 def get_agent() -> RouterAgent:
-
     dummy_chat_id = uuid.uuid4()
     memory = ChatMemoryBuffer(token_limit=40000)
 
     llm = get_llm()
 
-    skill_map = SkillMap(
-        skills=[Multiply()]
-    )
+    skill_map = SkillMap(skills=[Multiply()])
 
-    context_modules = [
-        DummyContextModule(llm=llm, chat_id=dummy_chat_id)
-    ]
+    context_modules = [DummyContextModule(llm=llm, chat_id=dummy_chat_id)]
 
     agent = RouterAgent(
         chat_id=dummy_chat_id,
@@ -50,7 +43,6 @@ def get_agent() -> RouterAgent:
 
 
 def invoke(agent: RouterAgent, user_input: str) -> StreamingAgentChatResponse:
-
     async def run(input: str) -> StreamingAgentChatResponse:
         response = await agent.run(input=input)
         return response

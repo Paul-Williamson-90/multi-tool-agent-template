@@ -106,9 +106,7 @@ class StandardCondenser(CondenseModuleBase):
         prompt = CHAT_HISTORY_CONDENSE.format(
             user_last_message=user_intent,
             condensed=(
-                condensed
-                if condensed != ""
-                else "No messages have been condensed yet."
+                condensed if condensed != "" else "No messages have been condensed yet."
             ),
             current_message=batch_str,
         )
