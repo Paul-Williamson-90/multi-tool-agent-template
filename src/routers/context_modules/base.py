@@ -52,6 +52,7 @@ class VerifyContext(FunctionCallSkill):
 
 
 class ContextModuleBase(ABC):
+    name: str = "abstract_attribute"
     _description: str = (
         "{name} is a memory feature that stores context that has been retrieved via tool calls that you have activated previously. "
         "The purpose of this memory is to allow you to access retrieved information on request without it persisting in your "
@@ -63,11 +64,9 @@ class ContextModuleBase(ABC):
         self,
         chat_id: UUID,
         llm: LLM,
-        name: str,
     ):
         self.chat_id = chat_id
         self.llm = llm
-        self.name = name
         self.context: dict[str, Context] = {}
         self._load_context(chat_id)
         self.verify_tool = VerifyContext(self)
