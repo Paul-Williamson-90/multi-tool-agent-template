@@ -22,6 +22,7 @@ class VerifyContext(FunctionCallSkill):
     steps that would otherwise potentially degrade the LLM's performance due to attention-span \
     limitations.
     """
+
     def __init__(
         self,
         context_module: "ContextModuleBase",
@@ -102,6 +103,7 @@ class ContextModuleBase(ABC):
     _description : str
         The description of the context module for the LLM.
     """
+
     name: str = "abstract_attribute"
     _description: str = (
         "{name} is a memory feature that stores context that has been retrieved via tool calls that you have activated previously. "

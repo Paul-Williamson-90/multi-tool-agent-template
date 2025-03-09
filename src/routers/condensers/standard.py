@@ -93,6 +93,7 @@ class StandardCondenser(CondenseModuleBase):
     _condense_kwargs : dict[str, Any], optional
         The inference kwargs for the condense prompt, by default {"max_tokens": 1000}
     """
+
     _user_intent_kwargs: dict[str, Any] = {"max_tokens": 300}
     _condense_kwargs: dict[str, Any] = {"max_tokens": 1000}
 

@@ -184,6 +184,7 @@ class FunctionCallSkill(ABC):
             return SkillOutput(response_to_llm=f"{a} times {b} is {a*b}")
     ```
     """
+
     def __init__(
         self,
         name: str,
@@ -337,7 +338,7 @@ class SkillMap:
     from src.routers.skills import SkillMap
     from working_example.skills import Multiply
     ...
-    
+
     skill_map = SkillMap(skills=[Multiply()])
 
     agent = RouterAgent(
@@ -349,6 +350,7 @@ class SkillMap:
     )
     ```
     """
+
     def __init__(self, skills: list[FunctionCallSkill]):
         """Instantiates a SkillMap object.
 

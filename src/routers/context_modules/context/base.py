@@ -20,6 +20,7 @@ class Content(BaseModel, ABC):
     """A parent class for defining a content type that can be used with a ContextModuleBase child class.
     You should define the attributes of this Pydantic model in the child class.
     """
+
     @abstractmethod
     def __str__(self) -> str:
         """The content as a string that is presented to an LLM.
@@ -106,6 +107,7 @@ class Context(ABC):
     _max_content_in_summarise : int, optional
         The maximum number of content items to summarise, by default 30.
     """
+
     _source: str = "abstract_attribute"
     _max_show_content: int = 5
     _llm_extract_kwargs: dict[str, Any] = {"max_tokens": 1000, "temperature": 0.2}
@@ -135,7 +137,7 @@ class Context(ABC):
         - chat_id
         - context_id
         - _count
-        
+
 
         Parameters
         ----------

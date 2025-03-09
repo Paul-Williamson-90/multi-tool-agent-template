@@ -102,6 +102,7 @@ class RouterAgent(Workflow):
                 print(words.delta, end="", flush=True)
     ```
     """
+
     _round: int = 0
 
     def __init__(

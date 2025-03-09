@@ -34,6 +34,7 @@ class CondenseModuleBase(ABC):
     to save space in the context window of the LLM. This helps reduce the needle-in-the-haystack \
     problem that causes LLM performance to degrade over time.
     """
+
     def __init__(
         self,
         n_msg_trigger: Optional[int] = None,
