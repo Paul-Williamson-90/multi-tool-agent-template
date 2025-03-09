@@ -44,6 +44,8 @@ RESPONSE_INSTRUCTIONS = PromptTemplate(
 \t- New lines, tabs, bullet points and numbered lists.
 \t- No other formatting is allowed.
 </instructions>
+
+# RESPONSE
 """
     )
 )
