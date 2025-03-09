@@ -67,6 +67,10 @@ class Context(ABC):
     def load_from_chat_id_context_id(self):
         pass
 
+    def _load(self):
+        self.load_from_chat_id_context_id()
+        self._loaded = True
+
     @abstractmethod
     def save_context(self):
         pass
@@ -90,7 +94,7 @@ class Context(ABC):
         if self._count:
             return self._count
         if not self._loaded:
-            self.load_from_chat_id_context_id()
+            self._load()
         assert isinstance(self.content, list)
         return len(self.content)
 
@@ -103,7 +107,7 @@ class Context(ABC):
 
     def show_content_by_page(self, page: int) -> str:
         if not self._loaded:
-            self.load_from_chat_id_context_id()
+            self._load()
 
         assert isinstance(self.content, list)
 
@@ -119,13 +123,13 @@ class Context(ABC):
 
     def get_short_references(self) -> list[str]:
         if not self._loaded:
-            self.load_from_chat_id_context_id()
+            self._load()
         assert isinstance(self.content, list)
         return [c.short_reference for c in self.content]
 
     def get_content_by_reference(self, references: list[str]) -> str:
         if not self._loaded:
-            self.load_from_chat_id_context_id()
+            self._load()
         assert isinstance(self.content, list)
 
         response = ""
@@ -142,7 +146,7 @@ class Context(ABC):
 
     def extract(self, instructions: str, llm: LLM) -> ExtractedFacts:
         if not self._loaded:
-            self.load_from_chat_id_context_id()
+            self._load()
 
         assert isinstance(self.content, list)
 
@@ -173,7 +177,7 @@ class Context(ABC):
 
     def summarise(self, query: str, llm: LLM) -> str:
         if not self._loaded:
-            self.load_from_chat_id_context_id()
+            self._load()
 
         assert isinstance(self.content, list)
 
