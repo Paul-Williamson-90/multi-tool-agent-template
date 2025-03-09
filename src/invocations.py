@@ -41,6 +41,28 @@ def structured_invocation(
     prompt_template: PromptTemplate = DEFAULT_STRUCTURED_PROMPT_TEMPLATE,
     llm_kwargs: dict[str, Any] = {},
 ) -> BaseModel:
+    """A function for invoking an LLM with a structured output. Defined separately from \
+    Llama-Index built-in structured invocation due to some LLM modules structured output \
+    methods are yet to be implemented.
+
+    Parameters
+    ----------
+    llm : LLM
+        The LLM module to be invoked.
+    context : str
+        The context of the prompt.
+    pydantic_object : type[BaseModel]
+        The Pydantic object to be used for the structured output.
+    prompt_template : PromptTemplate, optional
+        A prompt template for combining the context and Pydantic schema, by default DEFAULT_STRUCTURED_PROMPT_TEMPLATE
+    llm_kwargs : dict[str, Any], optional
+        Inference kwargs passed to the LLM, by default {}
+
+    Returns
+    -------
+    BaseModel
+        The structured output from the LLM.
+    """
     response = llm.complete(
         prompt=prompt_template.format(
             context=context,
@@ -64,6 +86,22 @@ def non_structured_invocation(
     prompt: str,
     inference_kwargs: dict[str, Any] = {},
 ) -> str:
+    """Simple function for invoking an LLM completion process.
+
+    Parameters
+    ----------
+    llm : LLM
+        The LLM module to be invoked.
+    prompt : str
+        The prompt to be used for the LLM.
+    inference_kwargs : dict[str, Any], optional
+        Inference kwargs passed to the LLM, by default {}
+
+    Returns
+    -------
+    str
+        The response from the LLM.
+    """
     response: CompletionResponse = llm.complete(prompt=prompt, **inference_kwargs)
     response_str = str(response)
 
@@ -81,6 +119,24 @@ def non_structured_streamed_invocation(
     memory: ChatMemoryBuffer,
     inference_kwargs: dict[str, Any] = {},
 ) -> StreamingAgentChatResponse:
+    """Function for invoking an LLM completion process and streaming the response.
+
+    Parameters
+    ----------
+    llm : LLM
+        The LLM module to be invoked.
+    prompt : str
+        The prompt to be used for the LLM.
+    memory : ChatMemoryBuffer
+        The memory buffer to store the response.
+    inference_kwargs : dict[str, Any], optional
+        Inference kwargs passed to the LLM, by default {}
+
+    Returns
+    -------
+    StreamingAgentChatResponse
+        The streaming response from the LLM.
+    """
     response: CompletionResponse = llm.stream_complete(
         prompt=prompt, **inference_kwargs
     )
