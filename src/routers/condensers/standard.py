@@ -18,7 +18,21 @@ USER_INTENT_CONDENSE = PromptTemplate(
 <system>The user has sent you a message and your task is to re-write the user's message \
 in a way that includes relevant information from prior messages that the user is referring to. \
 For example, when the user refers to information (such as facts, entities, or prior conversations) in a \
-prior message but does not directly state it in their last message (presupposition).
+prior message but does not directly state it in their last message (presupposition):
+```example
+# CHAT HISTORY:
+<chat history>User: What can you tell me about the new iPhone?
+Assistant: The new iPhone has a better camera and a faster processor.</chat history>
+
+# USER'S LAST MESSAGE:
+<user>User: How much does it cost?</user>
+
+# RESPONSE:
+<response>User: How much does the new iPhone cost?</response>
+```
+In this example, the user is referring to the new iPhone in their last message, \
+which was mentioned in the prior message. The user's message was re-written to include the relevant information \
+from the prior message.
 
 **Your response should be in first-person from the perspective of the user.**
 **Your re-write of the user's message must not be embelished**
@@ -40,17 +54,16 @@ CHAT_HISTORY_CONDENSE = PromptTemplate(
     dedent(
         """# SYSTEM:\n
 <system>You are an agentic ChatBot currently in conversation with a user, however your context window is too small \
-to fit the entire chat history into the prompt. Your task is to condense the chat history so that only the most relevant information \
-is retained. Relevance should be determined on how useful the information is to the user's current query. \
-You must use concise bullet points for each piece of information to ensure the chat history is easy to read and understand. \
-If the current messages to be condensed are irrelevant to the user's last message, \
-simply output these words 'NO RELEVANT INFORMATION'.
+to fit the entire chat history into the prompt. Your task is to condense the chat history to short bullet-points \
+that capture the most important information from the conversation so far. This will allow you to refer back to the \
+conversation without having to scroll through the entire chat history.
 
-# CONDENSED CHAT HISTORY SO FAR...
-<condensed>{condensed}</condensed>
+**Where the current messages are of high relevance to the user's last message, you should ensure more detail is captured, \
+otherwise you should only provide a high-level summary.**
 
 # USER'S LAST MESSAGE FOR CHECKING RELEVANCE AGAINST
 <user last message>{user_last_message}</user last message>
+</system>
 
 # CURRENT MESSAGES TO BE CONDENSED\n
 <current message>{current_message}</current message>
@@ -105,9 +118,6 @@ class StandardCondenser(CondenseModuleBase):
 
         prompt = CHAT_HISTORY_CONDENSE.format(
             user_last_message=user_intent,
-            condensed=(
-                condensed if condensed != "" else "No messages have been condensed yet."
-            ),
             current_message=batch_str,
         )
 
@@ -126,15 +136,20 @@ class StandardCondenser(CondenseModuleBase):
     def condense_chat_history(self, chat_history: ChatMemoryBuffer) -> str:
         user_intent = self.get_user_intent(chat_history)
         messages = chat_history.get_all()[:-1]
-        condensed = ""
+        condensed_list: list[str] = []
         for batch in range(0, len(messages), self._condense_batch_size):
             response = self._extract_relevant(
                 [str(m) for m in messages[batch : batch + self._condense_batch_size]],
-                condensed,
+                "\n".join(condensed_list),
                 user_intent,
             )
             if "NO RELEVANT INFORMATION" not in response:
-                condensed += "\n" + response
+                condensed_list.append(response)
+
+        if not condensed_list:
+            return ""
+
+        condensed = "\n".join(condensed_list)
 
         condensed = CONDENSED_TEMPLATE.format(
             condensed=condensed,
