@@ -12,7 +12,7 @@ from llama_index.core.workflow import StartEvent, StopEvent, Workflow, step
 from tenacity import before_log, retry, stop_after_attempt, wait_fixed
 
 from src.invocations import non_structured_streamed_invocation, structured_invocation
-from src.routers.condensers import CondenseModuleBase
+from src.routers.condensers import CondenseModuleBase, StandardCondenser
 from src.routers.constants import DEFAULT_TOKEN_LIMIT
 from src.routers.context_modules import ContextModuleBase
 from src.routers.events import (
@@ -53,10 +53,9 @@ class RouterAgent(Workflow):
         self,
         llm: LLM,
         skill_map: SkillMap,
-        condense_module: CondenseModuleBase,
+        condense_module: Optional[CondenseModuleBase] = None,
         context_modules: list[ContextModuleBase] = [],
         chat_history: Optional[ChatMemoryBuffer] = None,
-        timeout: int = 300,
         system_prompt: str = SYSTEM_PROMPT,
         chat_id: Optional[uuid.UUID] = None,
         generation_kwargs: dict[str, Any] = {"max_tokens": 8000},
@@ -66,11 +65,13 @@ class RouterAgent(Workflow):
         self.chat_id = chat_id or uuid.uuid4()
         logger.info(f"[{self.chat_id}]: Initializing RouterAgent")
 
-        super().__init__(timeout=timeout)
+        super().__init__(timeout=None)
 
         self.llm: LLM = llm
         self.skill_map: SkillMap = skill_map
-        self.condense_module: CondenseModuleBase = condense_module
+        self.condense_module: CondenseModuleBase = condense_module or StandardCondenser(
+            llm=self.llm
+        )
         self.system_prompt: str = self._prepare_system_prompt(system_prompt)
         self.memory: ChatMemoryBuffer = self._prepare_chat_memory(chat_history)
         self.internal_memory: ChatMemoryBuffer = self._prepare_internal_memory()
