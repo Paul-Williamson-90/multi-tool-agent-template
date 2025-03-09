@@ -187,7 +187,9 @@ class RouterAgent(Workflow):
         return StopEvent(result=output)
 
     @step
-    async def tool_selection(self, ev: RouterToolSelectionEvent) -> Union[ToolCallEvent, RouterEscapeEvent]:
+    async def tool_selection(
+        self, ev: RouterToolSelectionEvent
+    ) -> Union[ToolCallEvent, RouterEscapeEvent]:
         logger.info(f"[{self.chat_id}]: RouterAgent tool selection")
 
         context = self._structured_response_template(

@@ -11,7 +11,11 @@ select = ["E", "F", "I"]  # Enable common error & formatting rules
 ignore = ["E501"]  # Ignore line length violations
 
 [tool.mypy]
+
+[[tool.mypy.overrides]]
+module = ["llama_index.*", "pydantic.*", "tenacity.*", "numpy.*", "pandas.*", "dotenv.*", "working_example.*"]
 ignore_missing_imports = true
+
 
 [tool.black]
 line_length = 88
