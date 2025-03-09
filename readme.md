@@ -4,6 +4,7 @@ A multi-tool agent template with Llama-Index using the Workflow event-driven arc
 **NOTE: This repo was recently updated with some new functionality and is yet to be thoroughly tested.**
 
 ![Workflow](./basic_workflow.png)
+<img src="./basic_workflow" width="400" alt="Workflow">
 
 # Example
 See example.py file in the root of the project for a working demonstration.
