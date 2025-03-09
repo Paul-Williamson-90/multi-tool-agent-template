@@ -6,7 +6,11 @@ A multi-tool agent template with Llama-Index using the Workflow event-driven arc
 ![Workflow](./workflow.png)
 
 # Example
-See example.py file in the root of the project for a working demonstration.
+- See example.py file in the root of the project for a working demonstration.
+- You will need to setup a .env file in the root of the project with the following keys:
+```.env
+OPENAI_API_KEY=...
+```
 
 # Template Explained
 ## RouterAgent (src.routers.base.RouterAgent)
