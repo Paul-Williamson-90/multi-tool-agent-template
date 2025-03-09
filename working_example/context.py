@@ -48,12 +48,12 @@ class DummyContext(Context):
                 DummyContent(
                     content="This is a dummy content",
                     title="Dummy Content",
-                    reference="48375",
+                    content_id="48375",
                 ),
                 DummyContent(
                     content="This is a dummy content",
                     title="Dummy Content",
-                    reference="48376",
+                    content_id="48376",
                 ),
             ]
         )
