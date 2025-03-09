@@ -1,7 +1,10 @@
 # Project Template for Multi-Tool LLM Agents with Llama-Index
 A multi-tool agent template with Llama-Index using the Workflow event-driven architecture. This template has been extended with some custom functionality designed for various use-cases I've had to design for.
 
-**NOTE: This repo was recently updated with some new functionality and is yet to be fully implemented / tested.**
+**NOTE: This repo was recently updated with some new functionality and is yet to be thoroughly tested.**
+
+# Example
+See example.py file in the root of the project for a working demonstration.
 
 # Tenplate Explained
 ## RouterAgent (src.routers.base.RouterAgent)

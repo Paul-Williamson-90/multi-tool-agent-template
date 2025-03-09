@@ -3,7 +3,7 @@ import warnings
 
 from working_example.router import get_agent, invoke
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO) # NOTE: comment this line to disable logging
 warnings.filterwarnings("ignore")
 
 

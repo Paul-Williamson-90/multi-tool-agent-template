@@ -46,9 +46,9 @@ from src.routers.skills import SkillMap, SkillOutput
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.FileHandler("temp.log"),  # Save logs to temp.log
-    ],
+    # handlers=[
+    #     logging.FileHandler("temp.log"),
+    # ],
 )
 logger = logging.getLogger(__name__)
 
