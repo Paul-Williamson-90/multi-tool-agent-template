@@ -57,6 +57,7 @@ class DummyContext(Context):
                 ),
             ]
         )
+        self._loaded = True
 
     def save_context(self):
         # DUMMY implementation
